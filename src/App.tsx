@@ -112,10 +112,6 @@ export default function App() {
     <div className="app">
       <header className="top">
         <div className="wm"><span className="bu">CAM</span> <span className="llm">4.0</span></div>
-        <div className="scr-t">
-          <h1>RFQ Automation</h1>
-          <p>{skill ? `${skill.name}${phase === "review" ? " - review (human)" : ""}` : "Start - RFQ package intake"}</p>
-        </div>
         <div className="top-right">
           <span className="demo-chip">Demo - mock data, no backend</span>
           <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
@@ -299,16 +295,21 @@ export default function App() {
                   </div>
                 );
               }
-              const step = sub.steps[sub.steps.length - 1];
+              if (ss === "wait") return null;
               const chips: Record<string, string> = { run: "Running", wait: "Queued", review: "Review" };
               return (
                 <div key={sub.id}>
-                  <div className={"step" + (ss === "done" ? " done" : ss === "run" ? " run" : "")}>
-                    <div className="si">{j === skill.subs.length - 1 ? <IconUser size={16} /> : <img className="bull" src={bullHead} alt="Automated" />}</div>
-                    <div className="st-t"><div className="st-n">{sub.name}</div><div className="st-m">{step.note}</div></div>
-                    {ss === "done" ? <span className="done-tick"><IconCircleCheckFilled size={20} /></span> : <span className={"chip " + ss}>{chips[ss]}</span>}
-                  </div>
-                  {(ss === "done" || ss === "run" || ss === "review") && (OUTPUTS[sub.id] || []).map((c: OutCard) => (
+                  {sub.steps.map((stp, k) => {
+                    const st = ss === "done" ? "done" : ss === "review" ? (k === sub.steps.length - 1 ? "review" : "done") : k === 0 ? "run" : "wait";
+                    return (
+                      <div key={stp.name} className={"step" + (st === "done" ? " done" : st === "run" ? " run" : "")}>
+                        <div className="si">{stp.mode === "human" ? <IconUser size={16} /> : <img className="bull" src={bullHead} alt="Automated" />}</div>
+                        <div className="st-t"><div className="st-n">{stp.name}</div><div className="st-m">{stp.note}</div></div>
+                        {st === "done" ? <span className="done-tick"><IconCircleCheckFilled size={20} /></span> : <span className={"chip " + st}>{chips[st]}</span>}
+                      </div>
+                    );
+                  })}
+                  {(OUTPUTS[sub.id] || []).map((c: OutCard) => (
                     <div className="ocard" key={c.title}>
                       <h3><span className="oi">{(() => { const I = ICONS[c.icon] || IconFileSpreadsheet; return <I size={15} />; })()}</span>{c.title}</h3>
                       {(c.rows || []).map(r => <div className="kv" key={r.k}><span className="k">{r.k}</span><span className="v" style={r.tone ? { color: `var(--${r.tone})` } : undefined}>{r.v}</span></div>)}
