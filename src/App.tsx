@@ -12,7 +12,7 @@ import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard, type
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
    to revert that piece to the approved base look. */
-const FEAT = { progressBar: true, reviewPanel: false };
+const FEAT = { progressBar: false, reviewPanel: false };
 
 const ICONS: Record<string, any> = {
   inbox: IconInbox, scan: IconScan, gauge: IconGauge, truck: IconTruck,
@@ -150,7 +150,7 @@ export default function App() {
                   <span className="wf-label" style={{ margin: 0 }}>Workflow - 10 skills</span>
                   <span className="wf-count">{doneCount} of 10 done</span>
                 </div>
-                <div className="pbar" style={{ margin: "0 2px 10px" }}><span style={{ width: `${doneCount * 10}%` }} /></div>
+                <div className="pbar" style={{ margin: "0 2px 10px" }}>{doneCount > 0 && <span style={{ width: `${(doneCount / skills.length) * 100}%` }} />}</div>
               </>
             ) : (
               <div className="wf-label">Workflow - 10 skills</div>
@@ -169,7 +169,7 @@ export default function App() {
                       <div className="nm">{s.name}</div>
                       <div className="st">{isDone ? <span className="done-tick"><IconCircleCheckFilled size={16} /></span> : st}</div>
                       {FEAT.progressBar && i === skillIdx && phase !== "done" && (
-                        <div className="pbar"><span style={{ width: `${(subIdx / s.subs.length) * 100}%` }} /></div>
+                        <div className="pbar">{subIdx > 0 && <span style={{ width: `${(subIdx / s.subs.length) * 100}%` }} />}</div>
                       )}
                     </div>
                     <div className="ck"><IconChevronDown size={14} /></div>
