@@ -4,10 +4,11 @@ import {
   IconClipboardCheck, IconDatabase, IconFiles, IconFileSpreadsheet, IconFileZip,
   IconFolder, IconGauge, IconInbox, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand,
   IconLink, IconMail, IconMessage, IconMicrophone, IconMoon, IconPencil, IconPlugConnected, IconPlus,
-  IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled,
+  IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
 import { useList } from "@refinedev/core";
+import { dictationSupported, startDictation, stopDictation, useDictate } from "./dictation";
 import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard, type Skill } from "./data";
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
@@ -53,6 +54,16 @@ export default function App() {
     setMsgs(m => [...m, { who: "ai", text: REVIEW_LINE[skills[i].n] }]);
   }, []);
   const [draft, setDraft] = useState("");
+  const dic = useDictate();
+  const listening = dic.phase === "listening" || dic.phase === "requesting";
+  const elapsed = dic.startedAt ? `${Math.floor((Date.now() - dic.startedAt) / 60000)}:${String(Math.floor((Date.now() - dic.startedAt) / 1000) % 60).padStart(2, "0")}` : "0:00";
+  useEffect(() => {
+    if (!listening) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") stopDictation(); };
+    window.addEventListener("keydown", onKey);
+    const t = setInterval(() => setDraft(d => d), 500); // tick the timer display
+    return () => { window.removeEventListener("keydown", onKey); clearInterval(t); };
+  }, [listening]);
   const [railMini, setRailMini] = useState(() => new URLSearchParams(location.search).has("mini"));
   const [afOpen, setAfOpen] = useState(() => new URLSearchParams(location.search).has("af"));
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -216,11 +227,6 @@ export default function App() {
             })}
             </div>
           </div>
-          <div className="legend">
-            <span><img className="bull" src={bullHead} alt="" /> Automated</span>
-            <span><IconUser size={13} /> Human step</span>
-            <span><IconPlugConnected size={13} /> Hook handoff</span>
-          </div>
           </>
           )}
         </section>
@@ -243,11 +249,25 @@ export default function App() {
             <div ref={chatEnd} />
           </div>
           <div className="composer">
-            <input className="in" placeholder="Ask about this RFQ..." value={draft}
-              onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
-            <button className="micb" aria-label="Dictate"><IconMicrophone size={18} /></button>
+            {listening ? (
+              <div className="wave" aria-live="polite">
+                {dic.levels.map((v, i) => <span key={i} className="wbar" style={{ height: `${6 + v * 24}px` }} />)}
+                <span className="wave-t">{dic.phase === "requesting" ? "Requesting microphone..." : elapsed}</span>
+              </div>
+            ) : (
+              <input className="in" placeholder={dictationSupported ? "Ask about this RFQ... or dictate" : "Ask about this RFQ..."} value={draft}
+                onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
+            )}
+            {dictationSupported && (
+              <button className={"micb" + (listening ? " live" : "")} aria-label={listening ? "Stop dictation" : "Dictate"}
+                onClick={() => listening ? stopDictation() : startDictation(draft, setDraft)}>
+                {listening ? <IconPlayerStop size={18} /> : <IconMicrophone size={18} />}
+              </button>
+            )}
             <button className="sendb" onClick={sendChat} aria-label="Send"><IconSend size={18} /></button>
           </div>
+          {dic.phase === "blocked" && <div className="dict-hint">Microphone blocked - allow mic access in the browser to dictate, or type instead.</div>}
+          {dic.error && <div className="dict-hint">{dic.error}</div>}
         </section>
 
         {/* RIGHT - steps output */}
@@ -324,7 +344,7 @@ export default function App() {
             {phase === "done" && (
               <div className="ocard"><h3><span className="oi"><IconCheck size={15} /></span>RFQ-1042 complete</h3>
                 <div className="kv"><span className="k">Quote sent to client</span><span className="v" style={{ color: "var(--blue)" }}>Yes</span></div>
-                <div className="kv"><span className="k">Client quote</span><span className="v" style={{ color: "var(--orange)" }}>Rs 10,00,000</span></div>
+                <div className="kv"><span className="k">Client quote</span><span className="v" style={{ color: "var(--blue)" }}>Rs 10,00,000</span></div>
               </div>
             )}
           </div>
