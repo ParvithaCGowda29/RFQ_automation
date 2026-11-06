@@ -167,11 +167,6 @@ export default function App() {
               </div>
             </div>
             <div className="af-s">BOM, mechanical drawings, Gerber files - hover or click Add files for upload options</div>
-            <div className="af-files">
-              {["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"].map(f => (
-                <div className="file-row" key={f}><IconFileSpreadsheet size={14} /><span className="nm">{f}</span><span className="ok"><IconCheck size={12} /> Scanned</span></div>
-              ))}
-            </div>
 
             {FEAT.progressBar && (
               <>
@@ -269,10 +264,21 @@ export default function App() {
           </div>
           <div className="pane-b">
             {!skill && (
-              <div className="empty"><div className="ei"><IconBolt size={28} /></div>
-                <h3>Steps output appears here</h3>
-                <p>When a skill starts, its sub-skill steps and their output show up in this pane.</p>
-              </div>
+              <>
+                <div className="ocard">
+                  <h3><span className="oi"><IconFileSpreadsheet size={15} /></span>Uploaded files</h3>
+                  {["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"].map(f => (
+                    <div className="orow" key={f}><IconFileSpreadsheet size={14} /><span className="n">{f}</span>
+                      <span className="m" style={{ color: "var(--blue)", display: "inline-flex", alignItems: "center", gap: 4 }}><IconCheck size={12} /> Scanned</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="empty" style={{ height: "auto", marginTop: 32 }}>
+                  <div className="ei"><IconBolt size={28} /></div>
+                  <h3>Steps output appears here</h3>
+                  <p>When a skill starts, its sub-skill steps and their output show up in this pane.</p>
+                </div>
+              </>
             )}
             {skill && skill.subs.map((sub, j) => {
               const ss = subStatus(j);
