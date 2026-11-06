@@ -179,3 +179,4 @@ button { font:inherit; color:inherit; }
 .rbtn { flex:1; height:42px; border:none; border-radius:999px; background:var(--orange); color:#1A1200; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; }
 .rbtn.ghost { background:var(--card); color:var(--ink2); border:1px solid var(--line-strong); font-weight:600; }
 .done-tick { color:var(--green); display:inline-flex; align-items:center; flex-shrink:0; }
+.sub-row .mode { gap:6px; }

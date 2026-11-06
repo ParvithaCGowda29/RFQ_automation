@@ -214,7 +214,7 @@ export default function App() {
                         return (
                           <div key={sub.id} className={"sub-row" + (ss === "done" ? " done" : ss === "run" || ss === "review" ? " act" : "")}>
                             <span className="sd" />{sub.name}
-                            <span className="mode">{ss === "done" ? <span className="done-tick"><IconCircleCheckFilled size={14} /></span> : isHuman ? <IconUser size={13} /> : <img className="bull" src={bullHead} alt="Automated" />}</span>
+                            <span className="mode">{ss === "done" && <span className="done-tick"><IconCircleCheckFilled size={14} /></span>}{isHuman ? <IconUser size={13} /> : <img className="bull" src={bullHead} alt="Automated" />}</span>
                           </div>
                         );
                       })}
@@ -298,7 +298,7 @@ export default function App() {
               return (
                 <div key={sub.id}>
                   <div className={"step" + (ss === "done" ? " done" : ss === "run" ? " run" : "")}>
-                    <div className="si">{j === skill.subs.length - 1 ? <IconUser size={16} /> : ss === "done" ? <IconCheck size={16} /> : <img className="bull" src={bullHead} alt="Automated" />}</div>
+                    <div className="si">{j === skill.subs.length - 1 ? <IconUser size={16} /> : <img className="bull" src={bullHead} alt="Automated" />}</div>
                     <div className="st-t"><div className="st-n">{sub.name}</div><div className="st-m">{step.note}</div></div>
                     {ss === "done" ? <span className="done-tick"><IconCircleCheckFilled size={20} /></span> : <span className={"chip " + ss}>{chips[ss]}</span>}
                   </div>
