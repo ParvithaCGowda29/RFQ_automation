@@ -11,7 +11,7 @@ import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard } fro
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
    to revert that piece to the approved base look. */
-const FEAT = { progressBar: true, reviewPanel: false };
+const FEAT = { progressBar: false, reviewPanel: false };
 
 const ICONS: Record<string, any> = {
   inbox: IconInbox, scan: IconScan, gauge: IconGauge, truck: IconTruck,
