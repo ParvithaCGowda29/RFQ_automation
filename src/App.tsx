@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   IconAlertTriangle, IconBolt, IconChartBar, IconCheck,
   IconClipboardCheck, IconDatabase, IconFiles, IconFileSpreadsheet, IconFileZip,
@@ -9,6 +9,9 @@ import {
 import bullHead from "./assets/bull-head.png";
 import { useList } from "@refinedev/core";
 import { dictationSupported, startDictation, stopDictation, useDictate } from "./dictation";
+import Uppy from "@uppy/core";
+import { CoverLetterEditor } from "./editor";
+import { BomGrid } from "./bomgrid";
 import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard, type Skill } from "./data";
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
@@ -44,29 +47,52 @@ export default function App() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([{ who: "ai", text: "Upload the RFQ package - BOM, mechanical drawings or Gerber files - with Add files on the left to begin." }]);
   const [files, setFiles] = useState<{ name: string; status: "scanning" | "scanned" }[]>([]);
-  const mockUpload = () => {
+  // Uppy manages the picked files (same library BAM_UI uses for intake). The pickers
+  // are real - the names listed are the files the user actually chose. Nothing is
+  // uploaded anywhere: there is no backend in this demo build, so the scan marks
+  // below are simulated intake statuses, not a real antivirus scan.
+  const uppy = useMemo(() => new Uppy({
+    id: "rfq-intake",
+    restrictions: { maxNumberOfFiles: 20, allowedFileTypes: [".xlsx", ".xls", ".csv", ".pdf", ".zip", ".gbr", ".ger", ".gtl", ".gbl", ".txt", ".dxf"] },
+  }), []);
+  const folderPick = useRef<HTMLInputElement>(null);
+  const bulkPick = useRef<HTMLInputElement>(null);
+  const zipPick = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onAdded = (f: { name?: string }) => {
+      const name = f.name || "file";
+      setFiles(fs => fs.some(x => x.name === name) ? fs : [...fs, { name, status: "scanning" }]);
+      setTimeout(() => setFiles(fs => fs.map(x => x.name === name ? { ...x, status: "scanned" } : x)), 800 + Math.random() * 900);
+    };
+    uppy.on("file-added", onAdded);
+    return () => { uppy.off("file-added", onAdded); };
+  }, [uppy]);
+  const addPicked = (list: FileList | null) => {
     setAfOpen(false);
-    if (files.length > 0) return;
-    const names = ["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"];
-    setFiles(names.map(name => ({ name, status: "scanning" as const })));
-    names.forEach((n, k) => setTimeout(() => {
-      setFiles(fs => fs.map(f => f.name === n ? { ...f, status: "scanned" as const } : f));
-      if (k === names.length - 1) setMsgs(m => [...m, ...CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text }))]);
-    }, 700 + k * 700));
+    if (!list) return;
+    Array.from(list).forEach(f => { try { uppy.addFile({ name: f.name, type: f.type, data: f, source: "AddFilesMenu" }); } catch { /* duplicate or restricted */ } });
   };
+  const greeted = useRef(false);
+  useEffect(() => {
+    if (!greeted.current && files.length > 0 && files.every(f => f.status === "scanned")) {
+      greeted.current = true;
+      setMsgs(m => [...m, ...CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text }))]);
+    }
+  }, [files]);
   // Demo states for screenshots: ?demo=running|review|final
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.has("uploaded")) {
       const names = ["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"];
       setFiles(names.map(name => ({ name, status: "scanned" as const })));
+      greeted.current = true;
       setMsgs(m => [...m, ...CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text }))]);
     }
     const d = params.get("demo");
     if (!d) return;
-    const map: Record<string, number> = { running: 4, review: 2, final: 9 };
+    const map: Record<string, number> = { running: 4, review: 2, final: 9, bom: 7 };
     const i = map[d] ?? 4;
-    setSkillIdx(i); setSubIdx(d === "running" ? 2 : 3); setExpanded(i);
+    setSkillIdx(i); setSubIdx(d === "running" || d === "bom" ? 2 : 3); setExpanded(i);
     setPhase(d === "running" ? "running" : "review");
     setMsgs(m => [...m, { who: "ai", text: REVIEW_LINE[skills[i].n] }]);
   }, []);
@@ -185,9 +211,12 @@ export default function App() {
                 <IconPlus size={14} /> Add files
               </button>
               <div className="af-menu" role="menu" aria-label="Add files">
-                <button role="menuitem" className="af-item" onClick={mockUpload}><IconFolder size={16} /> Choose folder</button>
-                <button role="menuitem" className="af-item" onClick={mockUpload}><IconFiles size={16} /> Bulk upload</button>
-                <button role="menuitem" className="af-item" onClick={mockUpload}><IconFileZip size={16} /> Upload zip</button>
+                <button role="menuitem" className="af-item" onClick={() => folderPick.current?.click()}><IconFolder size={16} /> Choose folder</button>
+                <button role="menuitem" className="af-item" onClick={() => bulkPick.current?.click()}><IconFiles size={16} /> Bulk upload</button>
+                <button role="menuitem" className="af-item" onClick={() => zipPick.current?.click()}><IconFileZip size={16} /> Upload zip</button>
+                <input ref={folderPick} type="file" multiple hidden {...({ webkitdirectory: "" } as object)} onChange={e => { addPicked(e.target.files); e.target.value = ""; }} />
+                <input ref={bulkPick} type="file" multiple hidden onChange={e => { addPicked(e.target.files); e.target.value = ""; }} />
+                <input ref={zipPick} type="file" accept=".zip,application/zip" hidden onChange={e => { addPicked(e.target.files); e.target.value = ""; }} />
               </div>
             </div>
             <div className="af-s">BOM, mechanical drawings, Gerber files - hover or click Add files for upload options</div>
@@ -353,6 +382,8 @@ export default function App() {
                   {(OUTPUTS[sub.id] || []).map((c: OutCard) => (
                     <div className="ocard" key={c.title}>
                       <h3><span className="oi">{(() => { const I = ICONS[c.icon] || IconFileSpreadsheet; return <I size={15} />; })()}</span>{c.title}</h3>
+                      {c.editor && <CoverLetterEditor content={c.editor} />}
+                      {c.grid && <BomGrid dark={theme === "dark"} columns={c.grid.columns} rows={c.grid.rows} />}
                       {(c.rows || []).map(r => <div className="kv" key={r.k}><span className="k">{r.k}</span><span className="v" style={r.tone ? { color: `var(--${r.tone})` } : undefined}>{r.v}</span></div>)}
                       {(c.files || []).map(f => <div className="orow" key={f.name}><IconFileSpreadsheet size={14} /><span className="n">{f.name}</span><span className="m">{f.meta}</span></div>)}
                       {(c.links || []).map(l => <div className="orow" key={l.name}><IconLink size={14} /><span className="n">{l.name}</span><span className="m">{l.meta}</span></div>)}

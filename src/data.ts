@@ -104,14 +104,14 @@ export const SKILLS: Skill[] = [
 
 // Sample output cards per sub-skill (front-end mock data).
 export interface OutRow { k: string; v: string; tone?: "blue" | "orange" }
-export interface OutCard { title: string; icon: string; rows?: OutRow[]; files?: { name: string; meta: string }[]; risks?: string[]; links?: { name: string; meta: string }[] }
+export interface OutCard { title: string; icon: string; rows?: OutRow[]; files?: { name: string; meta: string }[]; risks?: string[]; links?: { name: string; meta: string }[]; editor?: string; grid?: { columns: string[]; rows: string[][] } }
 export const OUTPUTS: Record<string, OutCard[]> = {
   "1.1": [ { title: "Registered case", icon: "sheet", rows: [
       { k: "RFQ ID", v: "RFQ-1042" }, { k: "Files received", v: "3" },
       { k: "Virus scan", v: "Passed", tone: "blue" }, { k: "CRM sync", v: "Done", tone: "blue" } ] } ],
   "1.2": [ { title: "Read so far", icon: "sheet", rows: [
       { k: "BOM lines read", v: "238" }, { k: "Drawing pages", v: "4" },
-      { k: "Gerber layers", v: "6" }, { k: "Gaps flagged", v: "2", tone: "orange" } ] } ],
+      { k: "Gerber layers", v: "6" }, { k: "Gaps flagged", v: "2", tone: "blue" } ] } ],
   "3.4": [ { title: "Feasibility verdict", icon: "gauge", rows: [
       { k: "Min component size (0402)", v: "Can build", tone: "blue" },
       { k: "Oven zones (8 needed)", v: "Can build", tone: "blue" } ],
@@ -120,14 +120,26 @@ export const OUTPUTS: Record<string, OutCard[]> = {
       { k: "Mouser Electronics", v: "Replied", tone: "blue" }, { k: "Digi-Key", v: "Replied", tone: "blue" },
       { k: "Avnet", v: "Replied", tone: "blue" }, { k: "Enclosure vendor A", v: "Pending" },
       { k: "Enclosure vendor B", v: "Pending" } ] } ],
+  "8.2": [ { title: "Costed BOM (multi-level)", icon: "table", grid: {
+      columns: ["Part", "Description", "Qty", "Unit", "Total"],
+      rows: [
+        ["U4", "MCU STM32F407", "1", "Rs 412", "Rs 412"],
+        ["U9", "PMIC TPS65217", "1", "Rs 268", "Rs 268"],
+        ["J2", "Connector 40-pin", "2", "Rs 96", "Rs 192"],
+        ["R12-R18", "Resistor 10k 0402", "140", "Rs 0.35", "Rs 49"],
+        ["PCB", "4-layer ENIG", "1", "Rs 1,840", "Rs 1,840"],
+        ["Assembly", "SMT + THT labor", "1", "Rs 2,150", "Rs 2,150"] ] } } ],
   "9.2": [ { title: "CAM reports (16)", icon: "sheet", files: [
       { name: "RFQ summary.xlsx", meta: "Ready" }, { name: "Cost breakdown.xlsx", meta: "Ready" },
       { name: "Supplier comparison.xlsx", meta: "Building" } ] } ],
   "9.3": [ { title: "Dashboards & Q&A", icon: "chart", links: [
       { name: "Superset - RFQ overview", meta: "Link" }, { name: "Ask DBHub a management question", meta: "Q&A" } ] } ],
+  "10.3": [ { title: "Quote email - cover letter", icon: "mail",
+      editor: "<p>Dear Customer,</p><p>Thank you for RFQ-1042. Please find our quote attached - pricing is valid for 30 days.</p><p>Regards,<br/>CAM 4.0 Sales</p>",
+      files: [{ name: "Costing_RFQ-1042.xlsx", meta: "Excel" }] } ],
   "10.4": [ { title: "Quote build-up", icon: "table", rows: [
       { k: "Costed BOM total", v: "Rs 8,42,300" }, { k: "FAI + NRE + assembly", v: "Rs 96,500" },
-      { k: "Taxes + buffers", v: "Rs 61,200" }, { k: "Client quote", v: "Rs 10,00,000", tone: "orange" } ] } ],
+      { k: "Taxes + buffers", v: "Rs 61,200" }, { k: "Client quote", v: "Rs 10,00,000", tone: "blue" } ] } ],
 };
 
 export const CHAT_START: [string, string][] = [
