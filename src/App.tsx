@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  IconAlertTriangle, IconBolt, IconChartBar, IconCheck, IconChevronDown,
-  IconClipboardCheck, IconDatabase, IconFileSpreadsheet, IconFileZip,
-  IconFolder, IconGauge, IconInbox, IconLink, IconMail, IconMessage,
-  IconMicrophone, IconMoon, IconPencil, IconPlugConnected, IconPlus,
-  IconRobot, IconScan, IconSend, IconSun, IconTable, IconTruck,
-  IconUpload, IconUser, IconCircleCheckFilled,
+  IconAlertTriangle, IconBolt, IconChartBar, IconCheck,
+  IconClipboardCheck, IconDatabase, IconFiles, IconFileSpreadsheet, IconFileZip,
+  IconFolder, IconGauge, IconInbox, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand,
+  IconLink, IconMail, IconMessage, IconMicrophone, IconMoon, IconPencil, IconPlugConnected, IconPlus,
+  IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled,
 } from "@tabler/icons-react";
+import bullHead from "./assets/bull-head.png";
 import { useList } from "@refinedev/core";
 import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard, type Skill } from "./data";
 
@@ -41,7 +41,6 @@ export default function App() {
   const [subIdx, setSubIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>("idle");
   const [expanded, setExpanded] = useState<number | null>(null);
-  const [filesOpen, setFilesOpen] = useState(true);
   const [msgs, setMsgs] = useState<Msg[]>(CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text })));
   // Demo states for screenshots: ?demo=running|review|final
   useEffect(() => {
@@ -49,14 +48,17 @@ export default function App() {
     if (!d) return;
     const map: Record<string, number> = { running: 4, review: 2, final: 9 };
     const i = map[d] ?? 4;
-    setSkillIdx(i); setSubIdx(d === "running" ? 2 : 3); setExpanded(i); setFilesOpen(false);
+    setSkillIdx(i); setSubIdx(d === "running" ? 2 : 3); setExpanded(i);
     setPhase(d === "running" ? "running" : "review");
     setMsgs(m => [...m, { who: "ai", text: REVIEW_LINE[skills[i].n] }]);
   }, []);
   const [draft, setDraft] = useState("");
+  const [railMini, setRailMini] = useState(() => new URLSearchParams(location.search).has("mini"));
+  const [afOpen, setAfOpen] = useState(() => new URLSearchParams(location.search).has("af"));
   const chatEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
+  useEffect(() => { if (new URLSearchParams(location.search).get("theme") === "dark") setTheme("dark"); }, []);
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const skill = skillIdx >= 0 ? skills[skillIdx] : null;
@@ -79,7 +81,7 @@ export default function App() {
   const startRun = () => {
     setMsgs(m => [...m, { who: "me", text: "Yes, start." },
       { who: "ai", text: "Starting Input Standardization - steps and output appear on the right." }]);
-    setSkillIdx(0); setSubIdx(0); setPhase("running"); setExpanded(0); setFilesOpen(false);
+    setSkillIdx(0); setSubIdx(0); setPhase("running"); setExpanded(0);
   };
 
   const approve = () => {
@@ -114,65 +116,92 @@ export default function App() {
           <h1>RFQ Automation</h1>
           <p>{skill ? `${skill.name}${phase === "review" ? " - review (human)" : ""}` : "Start - RFQ package intake"}</p>
         </div>
-        <span className="demo-chip">Demo - mock data, no backend</span>
-        <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
-          {theme === "light" ? <IconMoon size={18} /> : <IconSun size={18} />}
-        </button>
-        <div className="avatar">P</div>
+        <div className="top-right">
+          <span className="demo-chip">Demo - mock data, no backend</span>
+          <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
+            {theme === "light" ? <IconMoon size={16} /> : <IconSun size={16} />}
+          </button>
+          <div className="avatar">P</div>
+        </div>
       </header>
 
       <div className="main">
-        {/* LEFT RAIL - workflow */}
-        <section className="pane rail">
+        {/* LEFT RAIL - workflow (BAM_UI look) */}
+        <section className={"pane rail" + (railMini ? " mini" : "")}>
+          <div className="rail-h">
+            {!railMini && <h2>Workflow - 10 skills</h2>}
+            <button className="iconbtn sm" onClick={() => setRailMini(!railMini)} aria-expanded={!railMini}
+              aria-label={railMini ? "Expand navigation" : "Collapse navigation"} title={railMini ? "Expand navigation" : "Collapse navigation"}>
+              {railMini ? <IconLayoutSidebarLeftExpand size={14} /> : <IconLayoutSidebarLeftCollapse size={14} />}
+            </button>
+          </div>
+          {railMini ? (
+            <div className="mini-list">
+              {skills.map((s, i) => {
+                const isDone = i < doneCount || (i === skillIdx && phase === "done");
+                const isActive = !isDone && i === skillIdx;
+                const Icon = ICONS[s.icon] || IconBolt;
+                return (
+                  <div key={s.n} className="mini-item">
+                    <button className={"mini-dot" + (isDone ? " done" : isActive ? " on" : "")} title={s.name}
+                      onClick={() => { setRailMini(false); setExpanded(i); }}>
+                      {isDone ? <IconCheck size={15} /> : <Icon size={15} />}
+                      {isActive && <span className="pulse" />}
+                    </button>
+                    <span className="mini-label">{s.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+          <>
           <div className="pane-b">
-            <div className="addfiles" onClick={() => setFilesOpen(!filesOpen)} style={{ cursor: "pointer" }}>
-              <div className="af-h"><IconPlus size={16} /> Add files</div>
-              <div className="af-s">BOM, mechanical drawings, Gerber files</div>
-              {filesOpen && (
-                <>
-                  <div className="af-tiles">
-                    <div className="af-tile"><span className="ti"><IconFolder size={16} /></span>Choose folder</div>
-                    <div className="af-tile"><span className="ti"><IconUpload size={16} /></span>Bulk upload</div>
-                    <div className="af-tile"><span className="ti"><IconFileZip size={16} /></span>Zip upload</div>
-                  </div>
-                  <div style={{ marginTop: 10 }}>
-                    {["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"].map(f => (
-                      <div className="file-row" key={f}><IconFileSpreadsheet size={14} /><span className="nm">{f}</span><span className="ok"><IconCheck size={12} /> Scanned</span></div>
-                    ))}
-                  </div>
-                </>
-              )}
+            <div className={"af-wrap" + (afOpen ? " open" : "")} onMouseLeave={() => setAfOpen(false)}>
+              <button className="af-btn" aria-haspopup="menu" aria-expanded={afOpen} onClick={() => setAfOpen(!afOpen)}>
+                <IconPlus size={14} /> Add files
+              </button>
+              <div className="af-menu" role="menu" aria-label="Add files">
+                <button role="menuitem" className="af-item" onClick={() => setAfOpen(false)}><IconFolder size={16} /> Choose folder</button>
+                <button role="menuitem" className="af-item" onClick={() => setAfOpen(false)}><IconFiles size={16} /> Bulk upload</button>
+                <button role="menuitem" className="af-item" onClick={() => setAfOpen(false)}><IconFileZip size={16} /> Upload zip</button>
+              </div>
+            </div>
+            <div className="af-s">BOM, mechanical drawings, Gerber files - hover or click Add files for upload options</div>
+            <div className="af-files">
+              {["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"].map(f => (
+                <div className="file-row" key={f}><IconFileSpreadsheet size={14} /><span className="nm">{f}</span><span className="ok"><IconCheck size={12} /> Scanned</span></div>
+              ))}
             </div>
 
-            {FEAT.progressBar ? (
+            {FEAT.progressBar && (
               <>
                 <div className="wf-head">
-                  <span className="wf-label" style={{ margin: 0 }}>Workflow - 10 skills</span>
+                  <span className="wf-label" style={{ margin: 0 }}>Progress</span>
                   <span className="wf-count">{doneCount} of 10 done</span>
                 </div>
                 <div className="pbar" style={{ margin: "0 2px 10px" }}>{doneCount > 0 && <span style={{ width: `${(doneCount / skills.length) * 100}%` }} />}</div>
               </>
-            ) : (
-              <div className="wf-label">Workflow - 10 skills</div>
             )}
 
+            <div className="stages">
             {skills.map((s, i) => {
               const isDone = i < doneCount || (i === skillIdx && phase === "done");
-    const st = isDone ? "" : i === skillIdx ? `In progress - ${subIdx + 1} of ${s.subs.length} sub-skills` : "Waiting";
-              const cls = isDone ? "skill done" : i === skillIdx ? "skill active" : "skill";
+              const st = isDone ? "" : i === skillIdx ? `In progress - ${subIdx + 1} of ${s.subs.length} sub-skills` : "Waiting";
+              const isActive = !isDone && i === skillIdx;
+              const cls = isDone ? "skill done" : isActive ? "skill active" : "skill";
               const Icon = ICONS[s.icon] || IconBolt;
               return (
-                <div key={s.n}>
-                  <button className={cls + (expanded === i ? " open" : "")} onClick={() => setExpanded(expanded === i ? null : i)}>
-                    <div className="dot">{cls === "skill done" ? <IconCheck size={16} /> : <Icon size={16} />}</div>
+                <div key={s.n} className="stage-li">
+                  {i < skills.length - 1 && <span className="st-line" aria-hidden />}
+                  <button className={cls + (expanded === i ? " open" : "")} onClick={() => setExpanded(expanded === i ? null : i)} aria-expanded={expanded === i}>
+                    <div className="dot">{isDone ? <IconCheck size={15} /> : <Icon size={15} />}{isActive && <span className="pulse" />}</div>
                     <div className="tx">
                       <div className="nm">{s.name}</div>
-                      <div className="st">{isDone ? <span className="done-tick"><IconCircleCheckFilled size={16} /></span> : st}</div>
+                      <div className="st">{isDone ? <span className="done-tick"><IconCircleCheckFilled size={15} /></span> : st}</div>
                       {FEAT.progressBar && i === skillIdx && phase !== "done" && (
                         <div className="pbar">{subIdx > 0 && <span style={{ width: `${(subIdx / s.subs.length) * 100}%` }} />}</div>
                       )}
                     </div>
-                    <div className="ck"><IconChevronDown size={14} /></div>
                   </button>
                   {expanded === i && s.n >= 2 && (
                     <div className="hooknote"><IconPlugConnected size={13} /><span>Started by hook from {skills[i - 1].name} - output handed over automatically</span></div>
@@ -185,7 +214,7 @@ export default function App() {
                         return (
                           <div key={sub.id} className={"sub-row" + (ss === "done" ? " done" : ss === "run" || ss === "review" ? " act" : "")}>
                             <span className="sd" />{sub.name}
-                            <span className="mode">{ss === "done" ? <span className="done-tick"><IconCircleCheckFilled size={14} /></span> : isHuman ? <IconUser size={13} /> : <IconRobot size={13} />}</span>
+                            <span className="mode">{ss === "done" ? <span className="done-tick"><IconCircleCheckFilled size={14} /></span> : isHuman ? <IconUser size={13} /> : <img className="bull" src={bullHead} alt="Automated" />}</span>
                           </div>
                         );
                       })}
@@ -194,12 +223,15 @@ export default function App() {
                 </div>
               );
             })}
+            </div>
           </div>
           <div className="legend">
-            <span><IconRobot size={13} /> Automated</span>
+            <span><img className="bull" src={bullHead} alt="" /> Automated</span>
             <span><IconUser size={13} /> Human step</span>
             <span><IconPlugConnected size={13} /> Hook handoff</span>
           </div>
+          </>
+          )}
         </section>
 
         {/* MIDDLE - assistant chat */}
@@ -222,7 +254,7 @@ export default function App() {
           <div className="composer">
             <input className="in" placeholder="Ask about this RFQ..." value={draft}
               onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
-            <button className="iconbtn" aria-label="Voice"><IconMicrophone size={18} /></button>
+            <button className="micb" aria-label="Dictate"><IconMicrophone size={18} /></button>
             <button className="sendb" onClick={sendChat} aria-label="Send"><IconSend size={18} /></button>
           </div>
         </section>
@@ -266,7 +298,7 @@ export default function App() {
               return (
                 <div key={sub.id}>
                   <div className={"step" + (ss === "done" ? " done" : ss === "run" ? " run" : "")}>
-                    <div className="si">{j === skill.subs.length - 1 ? <IconUser size={16} /> : ss === "done" ? <IconCheck size={16} /> : <IconRobot size={16} />}</div>
+                    <div className="si">{j === skill.subs.length - 1 ? <IconUser size={16} /> : ss === "done" ? <IconCheck size={16} /> : <img className="bull" src={bullHead} alt="Automated" />}</div>
                     <div className="st-t"><div className="st-n">{sub.name}</div><div className="st-m">{step.note}</div></div>
                     {ss === "done" ? <span className="done-tick"><IconCircleCheckFilled size={20} /></span> : <span className={"chip " + ss}>{chips[ss]}</span>}
                   </div>
