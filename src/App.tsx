@@ -42,10 +42,27 @@ export default function App() {
   const [subIdx, setSubIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>("idle");
   const [expanded, setExpanded] = useState<number | null>(null);
-  const [msgs, setMsgs] = useState<Msg[]>(CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text })));
+  const [msgs, setMsgs] = useState<Msg[]>([{ who: "ai", text: "Upload the RFQ package - BOM, mechanical drawings or Gerber files - with Add files on the left to begin." }]);
+  const [files, setFiles] = useState<{ name: string; status: "scanning" | "scanned" }[]>([]);
+  const mockUpload = () => {
+    setAfOpen(false);
+    if (files.length > 0) return;
+    const names = ["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"];
+    setFiles(names.map(name => ({ name, status: "scanning" as const })));
+    names.forEach((n, k) => setTimeout(() => {
+      setFiles(fs => fs.map(f => f.name === n ? { ...f, status: "scanned" as const } : f));
+      if (k === names.length - 1) setMsgs(m => [...m, ...CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text }))]);
+    }, 700 + k * 700));
+  };
   // Demo states for screenshots: ?demo=running|review|final
   useEffect(() => {
-    const d = new URLSearchParams(location.search).get("demo");
+    const params = new URLSearchParams(location.search);
+    if (params.has("uploaded")) {
+      const names = ["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"];
+      setFiles(names.map(name => ({ name, status: "scanned" as const })));
+      setMsgs(m => [...m, ...CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text }))]);
+    }
+    const d = params.get("demo");
     if (!d) return;
     const map: Record<string, number> = { running: 4, review: 2, final: 9 };
     const i = map[d] ?? 4;
@@ -168,9 +185,9 @@ export default function App() {
                 <IconPlus size={14} /> Add files
               </button>
               <div className="af-menu" role="menu" aria-label="Add files">
-                <button role="menuitem" className="af-item" onClick={() => setAfOpen(false)}><IconFolder size={16} /> Choose folder</button>
-                <button role="menuitem" className="af-item" onClick={() => setAfOpen(false)}><IconFiles size={16} /> Bulk upload</button>
-                <button role="menuitem" className="af-item" onClick={() => setAfOpen(false)}><IconFileZip size={16} /> Upload zip</button>
+                <button role="menuitem" className="af-item" onClick={mockUpload}><IconFolder size={16} /> Choose folder</button>
+                <button role="menuitem" className="af-item" onClick={mockUpload}><IconFiles size={16} /> Bulk upload</button>
+                <button role="menuitem" className="af-item" onClick={mockUpload}><IconFileZip size={16} /> Upload zip</button>
               </div>
             </div>
             <div className="af-s">BOM, mechanical drawings, Gerber files - hover or click Add files for upload options</div>
@@ -238,7 +255,7 @@ export default function App() {
             <div><h2>Assistant</h2><div className="sub">Question and answer - I only act on your go-ahead</div></div>
           </div>
           <div className="pane-b">
-            {phase === "idle" && (
+            {phase === "idle" && files.length > 0 && files.every(f => f.status === "scanned") && (
               <div className="suggest"><button onClick={startRun}>Yes, start.</button></div>
             )}
             {msgs.map((m, i) => (
@@ -281,14 +298,18 @@ export default function App() {
           <div className="pane-b">
             {!skill && (
               <>
+                {files.length > 0 && (
                 <div className="ocard">
                   <h3><span className="oi"><IconFileSpreadsheet size={15} /></span>Uploaded files</h3>
-                  {["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"].map(f => (
-                    <div className="orow" key={f}><IconFileSpreadsheet size={14} /><span className="n">{f}</span>
-                      <span className="m" style={{ color: "var(--blue)", display: "inline-flex", alignItems: "center", gap: 4 }}><IconCheck size={12} /> Scanned</span>
+                  {files.map(f => (
+                    <div className="orow" key={f.name}><IconFileSpreadsheet size={14} /><span className="n">{f.name}</span>
+                      {f.status === "scanned"
+                        ? <span className="m" style={{ color: "var(--blue)", display: "inline-flex", alignItems: "center", gap: 4 }}><IconCheck size={12} /> Scanned</span>
+                        : <span className="m" style={{ color: "var(--ink2)" }}>Scanning...</span>}
                     </div>
                   ))}
                 </div>
+                )}
                 <div className="empty" style={{ height: "auto", marginTop: 32 }}>
                   <div className="ei"><IconBolt size={28} /></div>
                   <h3>Steps output appears here</h3>
