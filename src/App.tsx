@@ -7,11 +7,12 @@ import {
   IconRobot, IconScan, IconSend, IconSun, IconTable, IconTruck,
   IconUpload, IconUser, IconCircleCheckFilled,
 } from "@tabler/icons-react";
-import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard } from "./data";
+import { useList } from "@refinedev/core";
+import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard, type Skill } from "./data";
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
    to revert that piece to the approved base look. */
-const FEAT = { progressBar: false, reviewPanel: false };
+const FEAT = { progressBar: true, reviewPanel: false };
 
 const ICONS: Record<string, any> = {
   inbox: IconInbox, scan: IconScan, gauge: IconGauge, truck: IconTruck,
@@ -33,6 +34,8 @@ const REVIEW_CHECKS: Record<number, string[]> = {
 };
 
 export default function App() {
+  const { result } = useList<Skill>({ resource: "skills" });
+  const skills: Skill[] = (result?.data?.length ? result.data : SKILLS) as Skill[];
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [skillIdx, setSkillIdx] = useState(-1);
   const [subIdx, setSubIdx] = useState(0);
@@ -48,7 +51,7 @@ export default function App() {
     const i = map[d] ?? 4;
     setSkillIdx(i); setSubIdx(d === "running" ? 2 : 3); setExpanded(i); setFilesOpen(false);
     setPhase(d === "running" ? "running" : "review");
-    setMsgs(m => [...m, { who: "ai", text: REVIEW_LINE[SKILLS[i].n] }]);
+    setMsgs(m => [...m, { who: "ai", text: REVIEW_LINE[skills[i].n] }]);
   }, []);
   const [draft, setDraft] = useState("");
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -56,8 +59,8 @@ export default function App() {
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  const skill = skillIdx >= 0 ? SKILLS[skillIdx] : null;
-  const doneCount = phase === "done" ? SKILLS.length : Math.max(0, skillIdx);
+  const skill = skillIdx >= 0 ? skills[skillIdx] : null;
+  const doneCount = phase === "done" ? skills.length : Math.max(0, skillIdx);
 
   // Mock run engine: auto-advance sub-skills, pause at the human review sub.
   useEffect(() => {
@@ -82,8 +85,8 @@ export default function App() {
   const approve = () => {
     if (!skill) return;
     setMsgs(m => [...m, { who: "me", text: "Approved - go ahead." }]);
-    if (skillIdx < SKILLS.length - 1) {
-      const next = SKILLS[skillIdx + 1];
+    if (skillIdx < skills.length - 1) {
+      const next = skills[skillIdx + 1];
       setMsgs(m => [...m, { who: "ai", text: HOOK_LINE(skill.name, next.name) }]);
       setSkillIdx(skillIdx + 1); setSubIdx(0); setPhase("running"); setExpanded(skillIdx + 1);
     } else {
@@ -111,6 +114,7 @@ export default function App() {
           <h1>RFQ Automation</h1>
           <p>{skill ? `${skill.name}${phase === "review" ? " - review (human)" : ""}` : "Start - RFQ package intake"}</p>
         </div>
+        <span className="demo-chip">Demo - mock data, no backend</span>
         <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
           {theme === "light" ? <IconMoon size={18} /> : <IconSun size={18} />}
         </button>
@@ -152,7 +156,7 @@ export default function App() {
               <div className="wf-label">Workflow - 10 skills</div>
             )}
 
-            {SKILLS.map((s, i) => {
+            {skills.map((s, i) => {
               const isDone = i < doneCount || (i === skillIdx && phase === "done");
     const st = isDone ? "" : i === skillIdx ? `In progress - ${subIdx + 1} of ${s.subs.length} sub-skills` : "Waiting";
               const cls = isDone ? "skill done" : i === skillIdx ? "skill active" : "skill";
@@ -171,7 +175,7 @@ export default function App() {
                     <div className="ck"><IconChevronDown size={14} /></div>
                   </button>
                   {expanded === i && s.n >= 2 && (
-                    <div className="hooknote"><IconPlugConnected size={13} /><span>Started by hook from {SKILLS[i - 1].name} - output handed over automatically</span></div>
+                    <div className="hooknote"><IconPlugConnected size={13} /><span>Started by hook from {skills[i - 1].name} - output handed over automatically</span></div>
                   )}
                   {expanded === i && (
                     <div className="subs">
@@ -243,7 +247,7 @@ export default function App() {
               if (phase === "done" && j === skill.subs.length - 1) return null;
               if (FEAT.reviewPanel && phase === "review" && j === skill.subs.length - 1) {
                 const checks = REVIEW_CHECKS[skill.n] || [`${skill.name} output ready`, skill.hook.replace("Hook passes:", "Hook will pass:")];
-                const next = skillIdx < SKILLS.length - 1 ? SKILLS[skillIdx + 1].name : null;
+                const next = skillIdx < skills.length - 1 ? skills[skillIdx + 1].name : null;
                 return (
                   <div className="rcard" key={sub.id}>
                     <div className="rh"><div className="ri"><IconUser size={18} /></div>
@@ -290,7 +294,7 @@ export default function App() {
               <div className="hk"><IconPlugConnected size={13} /> {skill.hook}</div>
               {phase === "review" ? (
                 <button className="abtn" onClick={approve}>
-                  <IconBolt size={16} /> {skillIdx < SKILLS.length - 1 ? `Action - start ${SKILLS[skillIdx + 1].name}` : "Approve and send quote"}
+                  <IconBolt size={16} /> {skillIdx < skills.length - 1 ? `Action - start ${skills[skillIdx + 1].name}` : "Approve and send quote"}
                 </button>
               ) : (
                 <button className="abtn off">Action - enabled at Review</button>

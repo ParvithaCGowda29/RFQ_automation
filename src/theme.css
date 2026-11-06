@@ -157,3 +157,4 @@ button { font:inherit; cursor:pointer; color:inherit; background:none; border:0;
 
 /* Green tick replaces 'Done' labels (her call, 6 Nov) */
 .done-tick { color:var(--green); display:inline-flex; align-items:center; flex-shrink:0; }
+.demo-chip { font-size:12px; font-weight:700; color:var(--ink2); border:1px dashed var(--line); border-radius:999px; padding:5px 12px; white-space:nowrap; }
