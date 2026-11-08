@@ -306,6 +306,9 @@ export default function App() {
             ))}
             <div ref={chatEnd} />
           </div>
+          <div className="prompt-suggestions" role="group" aria-label="Suggested questions for this RFQ">
+            {PROMPT_SUGGESTIONS.map(prompt => <button key={prompt} type="button" className="prompt-chip" onClick={() => sendChat(prompt)}>{prompt}</button>)}
+          </div>
           <div className="composer">
             {listening ? (
               <div className="wave" aria-live="polite">
@@ -313,7 +316,7 @@ export default function App() {
                 <span className="wave-t">{dic.phase === "requesting" ? "Requesting microphone..." : elapsed}</span>
               </div>
             ) : (
-              <input className="in" placeholder={dictationSupported ? "Ask about this RFQ... or dictate" : "Ask about this RFQ..."} value={draft}
+              <input className="in" value={draft}
                 onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
             )}
             {dictationSupported && (
@@ -323,9 +326,6 @@ export default function App() {
               </button>
             )}
             <button className="sendb" onClick={() => sendChat()} aria-label="Send"><IconSend size={18} /></button>
-          </div>
-          <div className="prompt-suggestions" role="group" aria-label="Suggested questions for this RFQ">
-            {PROMPT_SUGGESTIONS.map(prompt => <button key={prompt} type="button" className="prompt-chip" onClick={() => sendChat(prompt)}>{prompt}</button>)}
           </div>
           {dic.phase === "blocked" && <div className="dict-hint">Microphone blocked - allow mic access in the browser to dictate, or type instead.</div>}
           {dic.error && <div className="dict-hint">{dic.error}</div>}
