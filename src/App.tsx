@@ -17,6 +17,7 @@ import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard, type
 /* Provisional designs pending her wireframe sign-off: set either flag to false
    to revert that piece to the approved base look. */
 const FEAT = { progressBar: false, reviewPanel: false };
+const PROMPT_SUGGESTIONS = ["Summarize this RFQ", "Check BOM risks", "What needs my review?"];
 
 const ICONS: Record<string, any> = {
   inbox: IconInbox, scan: IconScan, gauge: IconGauge, truck: IconTruck,
@@ -108,6 +109,7 @@ export default function App() {
     return () => { window.removeEventListener("keydown", onKey); clearInterval(t); };
   }, [listening]);
   const [railMini, setRailMini] = useState(() => new URLSearchParams(location.search).has("mini"));
+  const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [afOpen, setAfOpen] = useState(() => new URLSearchParams(location.search).has("af"));
   const chatEnd = useRef<HTMLDivElement>(null);
 
@@ -151,8 +153,8 @@ export default function App() {
     }
   };
 
-  const sendChat = () => {
-    const text = draft.trim();
+  const sendChat = (suggestion?: string) => {
+    const text = (suggestion ?? draft).trim();
     if (!text) return;
     setMsgs(m => [...m, { who: "me", text },
       { who: "ai", text: "Mock demo - the assistant answers from the workflow data only. The real Q&A comes with the backend." }]);
@@ -175,7 +177,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="main">
+      <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")}>
         {/* LEFT RAIL - workflow (BAM_UI look) */}
         <section className={"pane rail" + (railMini ? " mini" : "")}>
           <div className="rail-h">
@@ -262,7 +264,7 @@ export default function App() {
                         return (
                           <div key={sub.id} className={"sub-row" + (ss === "done" ? " done" : ss === "run" || ss === "review" ? " act" : "")}>
                             <span className="sd" />{sub.name}
-                            <span className="mode">{ss === "done" && <span className="done-tick"><IconCircleCheckFilled size={14} /></span>}{isHuman ? <IconUser size={13} /> : <img className="bull" src={bullHead} alt="Automated" />}</span>
+                            <span className="mode">{ss === "done" && <span className="done-tick"><IconCircleCheckFilled size={14} /></span>}<span className="mode-icon">{isHuman ? <IconUser size={14} /> : <img className="bull" src={bullHead} alt="Automated" />}</span></span>
                           </div>
                         );
                       })}
@@ -278,10 +280,20 @@ export default function App() {
         </section>
 
         {/* MIDDLE - assistant chat */}
-        <section className="pane mid">
+        <section className={"pane mid" + (assistantCollapsed ? " collapsed" : "")}>
+          {assistantCollapsed ? (
+            <div className="assistant-rail-head">
+              <button className="assistant-show" onClick={() => setAssistantCollapsed(false)} aria-expanded={false} aria-label="Show assistant">
+                <IconLayoutSidebarLeftExpand size={16} /><span>Show assistant</span>
+              </button>
+            </div>
+          ) : (
+          <>
           <div className="pane-h">
-            <IconMessage size={16} />
-            <div><h2>Assistant</h2><div className="sub">Question and answer - I only act on your go-ahead</div></div>
+            <div className="assistant-title"><h2 className="assistant-heading">BuLLM assistant</h2></div>
+            <button className="iconbtn sm assistant-hide" onClick={() => setAssistantCollapsed(true)} aria-expanded={true} aria-label="Hide assistant" title="Hide assistant">
+              <IconLayoutSidebarLeftCollapse size={14} />
+            </button>
           </div>
           <div className="pane-b">
             {phase === "idle" && files.length > 0 && files.every(f => f.status === "scanned") && (
@@ -310,10 +322,15 @@ export default function App() {
                 {listening ? <IconPlayerStop size={18} /> : <IconMicrophone size={18} />}
               </button>
             )}
-            <button className="sendb" onClick={sendChat} aria-label="Send"><IconSend size={18} /></button>
+            <button className="sendb" onClick={() => sendChat()} aria-label="Send"><IconSend size={18} /></button>
+          </div>
+          <div className="prompt-suggestions" role="group" aria-label="Suggested questions for this RFQ">
+            {PROMPT_SUGGESTIONS.map(prompt => <button key={prompt} type="button" className="prompt-chip" onClick={() => sendChat(prompt)}>{prompt}</button>)}
           </div>
           {dic.phase === "blocked" && <div className="dict-hint">Microphone blocked - allow mic access in the browser to dictate, or type instead.</div>}
           {dic.error && <div className="dict-hint">{dic.error}</div>}
+          </>
+          )}
         </section>
 
         {/* RIGHT - steps output */}
