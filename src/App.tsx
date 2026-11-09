@@ -7,17 +7,122 @@ import {
   IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
+import camLogoBlack from "./assets/cam-bom-automation-black.png";
+import camLogoWhite from "./assets/cam-bom-automation-white.png";
 import { useList } from "@refinedev/core";
 import { dictationSupported, startDictation, stopDictation, useDictate } from "./dictation";
 import Uppy from "@uppy/core";
 import { CoverLetterEditor } from "./editor";
 import { BomGrid } from "./bomgrid";
-import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, HOOK_LINE, type OutCard, type Skill } from "./data";
+import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, type OutCard, type Skill } from "./data";
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
    to revert that piece to the approved base look. */
 const FEAT = { progressBar: false, reviewPanel: false };
-const PROMPT_SUGGESTIONS = ["Summarize this RFQ", "Check BOM risks", "What needs my review?"];
+const SUPPORTED_UPLOAD_TYPES = [".xlsx", ".xls", ".csv", ".pdf", ".zip", ".gbr", ".ger", ".gtl", ".gbl", ".txt", ".dxf"];
+
+type DemoFile = { name: string; status: "scanning" | "scanned" };
+
+type AssistantPhase = "idle" | "running" | "review" | "done";
+
+function getMockReply(question: string, files: DemoFile[], skill: Skill | null, phase: AssistantPhase, subIdx: number) {
+  const q = question.toLowerCase();
+  const stage = skill?.name ?? "";
+  const stageIndex = skill?.n ?? 0;
+  const hasFiles = files.length > 0;
+  const count = files.length;
+  const scanned = files.filter(f => f.status === "scanned").length;
+
+  if (/file type|file format|extension|formats? can i upload|what can i upload/.test(q)) {
+    return `Supported formats: ${SUPPORTED_UPLOAD_TYPES.join(", ")}.`;
+  }
+  if (/scan|virus|duplicate/.test(q)) {
+    if (!hasFiles) return "No files have been uploaded.";
+    return `${scanned} of ${count} files scanned${scanned < count ? `; ${count - scanned} still scanning` : ""}.`;
+  }
+  if (/what happens after upload|after upload|how.*start|start.*workflow/.test(q)) {
+    return hasFiles
+      ? "When all files finish scanning, select Start in the Output panel."
+      : "Upload the RFQ package with Add files; then select Start in the Output panel.";
+  }
+  if (/supplier|vendor/.test(q)) {
+    if (stageIndex < 4) return "Supplier replies are not available yet; Supplier RFQ/Quoting Tools has not run.";
+    return "3 of 5 suppliers replied; the two enclosure vendors are pending.";
+  }
+  if (/risk|eol|end[- ]of[- ]life|lead.?time|buildable|bom/.test(q)) {
+    if (stageIndex < 2 && phase !== "done") return "Feasibility & Risk has not run yet.";
+    if (/buildable|can.*build/.test(q)) return "Mock feasibility result: buildable; the 0402 component size and 8 oven zones are supported.";
+    if (/lead.?time|j2|connector/.test(q) && !/eol|end[- ]of[- ]life/.test(q)) return "J2 is a long-lead item with a 14-week lead time.";
+    if (/eol|end[- ]of[- ]life/.test(q) && !/lead.?time|j2|connector/.test(q)) return "The EOL parts are U4 and U9.";
+    return "2 EOL parts: U4 and U9. J2 has a 14-week lead time.";
+  }
+  if (/gap|drawing/.test(q)) {
+    if (stageIndex < 1 && phase !== "done") return "Drawing extraction has not run yet.";
+    return "2 input gaps are flagged from the drawing.";
+  }
+  if (/what needs .*review|review|approval|approve/.test(q)) {
+    if (phase === "done") return "No review is pending; RFQ-1042 is complete.";
+    if (phase === "review" && skill) return `${stage} is waiting for your review.`;
+    if (phase === "running" && skill) return `No review is pending; ${stage} is running.`;
+    return "No review is pending yet.";
+  }
+  if (/quote.*sent|sent.*quote|quote email/.test(q)) {
+    if (phase === "done") return "Yes. The mock quote email was sent.";
+    if (stageIndex === 10 && phase === "review") return "No. The quote is waiting for your approval.";
+    return "No. The quote has not been sent yet.";
+  }
+  if (/quote|price|cost|total|amount/.test(q)) {
+    if (/bom|internal cost/.test(q) && stageIndex >= 8) return "Mock costed BOM total: Rs 8,42,300.";
+    if (stageIndex < 10 && phase !== "done") return "The sales quote is not ready yet.";
+    if (/breakdown|build.?up|included/.test(q)) return "Mock quote: Rs 8,42,300 costed BOM, Rs 96,500 FAI/NRE/assembly, and Rs 61,200 taxes/buffers.";
+    return "Mock client quote: Rs 10,00,000.";
+  }
+  if (/current output|what.*ready/.test(q)) {
+    if (phase === "done") return "RFQ-1042 is complete.";
+    if (!skill) return "No workflow is running yet.";
+    const currentSub = skill.subs[Math.min(subIdx, skill.subs.length - 1)];
+    return phase === "review" ? `Ready for review: ${stage} - ${currentSub.name}.` : `${stage} is running: ${currentSub.name}.`;
+  }
+  if (/summar|overview/.test(q)) {
+    if (!hasFiles) return "No RFQ files have been uploaded.";
+    const fileList = files.map(f => f.name).join(", ");
+    return `Mock RFQ-1042 package: ${count} file${count === 1 ? "" : "s"} (${fileList}); ${scanned} scanned.`;
+  }
+  if (/progress|what.*running|current stage|current output|what.*ready/.test(q)) {
+    if (phase === "done") return "RFQ-1042 is complete.";
+    if (!skill) return "No workflow is running yet.";
+    const currentSub = skill.subs[Math.min(subIdx, skill.subs.length - 1)];
+    if (phase === "review") return `Ready for review: ${stage} - ${currentSub.name}.`;
+    return `${stage} is running.`;
+  }
+  if (/what.*next|next step/.test(q)) {
+    if (phase === "done") return "There is no next step; RFQ-1042 is complete.";
+    if (phase === "review" && skill) return `Review ${stage} to continue.`;
+    return skill ? `${stage} is in progress.` : "Upload the RFQ package to begin.";
+  }
+  if (/uploaded files|which files|what files (are )?(uploaded|received)|file status/.test(q)) {
+    return hasFiles ? files.map(f => `${f.name}: ${f.status}`).join("; ") : "No files have been uploaded.";
+  }
+  return "I don't have a mock answer for that question.";
+}
+
+function getPromptSuggestions(question: string, files: DemoFile[], skill: Skill | null, phase: AssistantPhase) {
+  const q = question.toLowerCase();
+  if (/risk|eol|end[- ]of[- ]life|lead.?time|buildable|bom/.test(q)) {
+    return ["Which parts are EOL?", "What's J2's lead time?", "Is the RFQ buildable?"];
+  }
+  if (/supplier|vendor/.test(q)) return ["Which suppliers are pending?", "What is the current stage?", "What needs review?"];
+  if (/quote|price|cost|total|amount/.test(q)) return ["Show quote breakdown", "What is the client quote?", "Was the quote sent?"];
+  if (/review|approval|approve|gap|drawing/.test(q)) return ["What output is ready?", "What are the drawing gaps?", "What's next after review?"];
+  if (/scan|virus|duplicate|file|upload|format|extension/.test(q)) return ["Show scan status", "What file formats can I upload?", "What happens after upload?"];
+  if (/summar|overview/.test(q)) return ["Check BOM risks", "Show scan status", "What needs review?"];
+  if (phase === "done") return ["Show quote breakdown", "What is the client quote?", "Summarize the RFQ"];
+  if (phase === "review") return ["What needs my review?", "Summarize current output", "What's next after approval?"];
+  if (phase === "running") return ["What's running now?", "What output is ready?", "What's next?"];
+  if (skill) return ["What is the current stage?", "What output is ready?", "What needs review?"];
+  if (files.length) return ["Summarize RFQ-1042", "Check BOM risks", "Show scan status"];
+  return ["What file formats can I upload?", "What happens after upload?", "How do I start the workflow?"];
+}
 
 const ICONS: Record<string, any> = {
   inbox: IconInbox, scan: IconScan, gauge: IconGauge, truck: IconTruck,
@@ -54,7 +159,7 @@ export default function App() {
   // below are simulated intake statuses, not a real antivirus scan.
   const uppy = useMemo(() => new Uppy({
     id: "rfq-intake",
-    restrictions: { maxNumberOfFiles: 20, allowedFileTypes: [".xlsx", ".xls", ".csv", ".pdf", ".zip", ".gbr", ".ger", ".gtl", ".gbl", ".txt", ".dxf"] },
+    restrictions: { maxNumberOfFiles: 20, allowedFileTypes: SUPPORTED_UPLOAD_TYPES },
   }), []);
   const folderPick = useRef<HTMLInputElement>(null);
   const bulkPick = useRef<HTMLInputElement>(null);
@@ -91,11 +196,14 @@ export default function App() {
     }
     const d = params.get("demo");
     if (!d) return;
-    const map: Record<string, number> = { running: 4, review: 2, final: 9, bom: 7 };
+    const map: Record<string, number> = { running: 4, review: 9, final: 9, bom: 7 };
     const i = map[d] ?? 4;
     setSkillIdx(i); setSubIdx(d === "running" || d === "bom" ? 2 : 3); setExpanded(i);
-    setPhase(d === "running" ? "running" : "review");
-    setMsgs(m => [...m, { who: "ai", text: REVIEW_LINE[skills[i].n] }]);
+    setPhase(d === "running" || d === "bom" ? "running" : d === "final" ? "done" : "review");
+    const demoMessage = d === "final"
+      ? "The mock quote email has been sent. RFQ-1042 is complete - all 10 skills done."
+      : d === "review" ? REVIEW_LINE[10] : `${skills[i].name} is running.`;
+    setMsgs(m => [...m, { who: "ai", text: demoMessage }]);
   }, []);
   const [draft, setDraft] = useState("");
   const dic = useDictate();
@@ -119,45 +227,45 @@ export default function App() {
 
   const skill = skillIdx >= 0 ? skills[skillIdx] : null;
   const doneCount = phase === "done" ? skills.length : Math.max(0, skillIdx);
+  const lastUserQuestion = [...msgs].reverse().find(m => m.who === "me")?.text ?? "";
+  const promptSuggestions = getPromptSuggestions(lastUserQuestion, files, skill, phase);
 
-  // Mock run engine: auto-advance sub-skills, pause at the human review sub.
+  // Only the initial Start action and final quote approval are human-gated.
   useEffect(() => {
     if (phase !== "running" || !skill) return;
     const t = setTimeout(() => {
       if (subIdx < skill.subs.length - 1) {
         setSubIdx(subIdx + 1);
+      } else if (skillIdx < skills.length - 1) {
+        setSkillIdx(skillIdx + 1);
+        setSubIdx(0);
+        setExpanded(skillIdx + 1);
       } else {
         setPhase("review");
         setMsgs(m => [...m, { who: "ai", text: REVIEW_LINE[skill.n] }]);
       }
-    }, 1800);
+    }, 500);
     return () => clearTimeout(t);
   }, [phase, subIdx, skillIdx]);
 
   const startRun = () => {
-    setMsgs(m => [...m, { who: "me", text: "Yes, start." },
-      { who: "ai", text: "Starting Input Standardization - steps and output appear on the right." }]);
+    setMsgs(m => [...m, { who: "me", text: "Start Input Standardization" },
+      { who: "ai", text: "Input Standardization is starting." }]);
     setSkillIdx(0); setSubIdx(0); setPhase("running"); setExpanded(0);
   };
 
   const approve = () => {
-    if (!skill) return;
-    setMsgs(m => [...m, { who: "me", text: "Approved - go ahead." }]);
-    if (skillIdx < skills.length - 1) {
-      const next = skills[skillIdx + 1];
-      setMsgs(m => [...m, { who: "ai", text: HOOK_LINE(skill.name, next.name) }]);
-      setSkillIdx(skillIdx + 1); setSubIdx(0); setPhase("running"); setExpanded(skillIdx + 1);
-    } else {
-      setPhase("done");
-      setMsgs(m => [...m, { who: "ai", text: "The quote email has been sent to the client. RFQ-1042 is complete - all 10 skills done." }]);
-    }
+    if (!skill || phase !== "review" || skillIdx !== skills.length - 1) return;
+    setMsgs(m => [...m, { who: "me", text: "Approve and send quote." }]);
+    setPhase("done");
+    setMsgs(m => [...m, { who: "ai", text: "The mock quote email has been sent. RFQ-1042 is complete - all 10 skills done." }]);
   };
 
   const sendChat = (suggestion?: string) => {
     const text = (suggestion ?? draft).trim();
     if (!text) return;
-    setMsgs(m => [...m, { who: "me", text },
-      { who: "ai", text: "Mock demo - the assistant answers from the workflow data only. The real Q&A comes with the backend." }]);
+    const reply = getMockReply(text, files, skill, phase, subIdx);
+    setMsgs(m => [...m, { who: "me", text }, { who: "ai", text: reply }]);
     setDraft("");
   };
 
@@ -167,7 +275,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <div className="wm"><span className="bu">CAM</span> <span className="llm">4.0</span></div>
+        <img className="wm-logo" src={theme === "light" ? camLogoBlack : camLogoWhite} alt="CAM BOM Automation" />
         <div className="top-right">
           <span className="demo-chip">Demo - mock data, no backend</span>
           <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
@@ -236,7 +344,9 @@ export default function App() {
             <div className="stages">
             {skills.map((s, i) => {
               const isDone = i < doneCount || (i === skillIdx && phase === "done");
-              const st = isDone ? "" : i === skillIdx ? `In progress - ${subIdx + 1} of ${s.subs.length} sub-skills` : "Waiting";
+              const st = isDone ? "" : i === skillIdx
+                ? phase === "review" ? "Final approval required" : `In progress - ${subIdx + 1} of ${s.subs.length} sub-skills`
+                : "Waiting";
               const isActive = !isDone && i === skillIdx;
               const cls = isDone ? "skill done" : isActive ? "skill active" : "skill";
               const Icon = ICONS[s.icon] || IconBolt;
@@ -260,7 +370,7 @@ export default function App() {
                     <div className="subs">
                       {s.subs.map((sub, j) => {
                         const ss = i === skillIdx ? subStatus(j) : i < doneCount ? "done" : "wait";
-                        const isHuman = j === s.subs.length - 1;
+                        const isHuman = (s.n === 1 && j === 0) || (s.n === 10 && j === s.subs.length - 1);
                         return (
                           <div key={sub.id} className={"sub-row" + (ss === "done" ? " done" : ss === "run" || ss === "review" ? " act" : "")}>
                             <span className="sd" />{sub.name}
@@ -296,9 +406,6 @@ export default function App() {
             </button>
           </div>
           <div className="pane-b">
-            {phase === "idle" && files.length > 0 && files.every(f => f.status === "scanned") && (
-              <div className="suggest"><button onClick={startRun}>Yes, start.</button></div>
-            )}
             {msgs.map((m, i) => (
               <div key={i} className={"msg " + m.who}>
                 <div><div className="who">{m.who === "ai" ? "Assistant" : "You"}</div><div className="b">{m.text}</div></div>
@@ -307,7 +414,7 @@ export default function App() {
             <div ref={chatEnd} />
           </div>
           <div className="prompt-suggestions" role="group" aria-label="Suggested questions for this RFQ">
-            {PROMPT_SUGGESTIONS.map(prompt => <button key={prompt} type="button" className="prompt-chip" onClick={() => sendChat(prompt)}>{prompt}</button>)}
+            {promptSuggestions.map(prompt => <button key={prompt} type="button" className="prompt-chip" onClick={() => sendChat(prompt)}>{prompt}</button>)}
           </div>
           <div className="composer">
             {listening ? (
@@ -417,15 +524,21 @@ export default function App() {
               </div>
             )}
           </div>
+          {!skill && phase === "idle" && files.length > 0 && files.every(f => f.status === "scanned") && (
+            <div className="actionbar">
+              <div className="hk">Files scanned. Input Standardization is ready.</div>
+              <button className="abtn" onClick={startRun}><IconBolt size={16} /> Start</button>
+            </div>
+          )}
           {skill && phase !== "done" && !FEAT.reviewPanel && (
             <div className="actionbar">
-              <div className="hk"><IconPlugConnected size={13} /> {skill.hook}</div>
+              <div className="hk">{phase === "review" ? "Final approval required." : "Automated workflow - no intermediate approvals."}</div>
               {phase === "review" ? (
                 <button className="abtn" onClick={approve}>
-                  <IconBolt size={16} /> {skillIdx < skills.length - 1 ? `Action - start ${skills[skillIdx + 1].name}` : "Approve and send quote"}
+                  <IconCheck size={16} /> Approve and send quote
                 </button>
               ) : (
-                <button className="abtn off">Action - enabled at Review</button>
+                <button className="abtn off">Automated - no review needed</button>
               )}
             </div>
           )}
