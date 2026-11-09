@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { IconArrowLeft, IconArrowRight, IconCheck, IconEye, IconEyeOff, IconMoon, IconSun } from "@tabler/icons-react";
 import camLogoBlack from "./assets/cam-bom-automation-black.png";
 import camLogoWhite from "./assets/cam-bom-automation-white.png";
+import centumLogo from "./assets/centum-logo.png";
+import centumLogoDark from "./assets/centum-logo-dark.png";
 import "./login.css";
 
 type Theme = "light" | "dark";
@@ -64,13 +66,6 @@ export function LoginPage({
             <div className="login-kicker"><span className="login-kicker-dot" /> RFQ WORKFLOW</div>
             <h1>From RFQ package<br />to quote review.</h1>
             <p>Follow each step from file intake and BOM analysis to a quote ready for approval.</p>
-            <div className="login-flow" aria-label="Workflow steps">
-              <div className="login-flow-step"><span className="login-flow-icon"><IconCheck size={17} /></span><span>Ingest RFQ</span></div>
-              <span className="login-flow-line" />
-              <div className="login-flow-step"><span className="login-flow-icon"><IconCheck size={17} /></span><span>Analyze BOM</span></div>
-              <span className="login-flow-line" />
-              <div className="login-flow-step active"><span className="login-flow-icon"><IconArrowRight size={17} /></span><span>Review quote</span></div>
-            </div>
             <div className="login-story" onMouseEnter={() => setCarouselHeld(true)} onMouseLeave={() => setCarouselHeld(false)}
               onFocus={() => setCarouselHeld(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setCarouselHeld(false); }}>
               <div className="login-story-copy" aria-live="polite" key={messageIndex}>
@@ -99,14 +94,15 @@ export function LoginPage({
             aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}>
             {theme === "light" ? <IconMoon size={17} /> : <IconSun size={17} />}
           </button>
-          <div className="login-brand-block">
-            <img className="login-logo" src={theme === "light" ? camLogoBlack : camLogoWhite} alt="CAM BOM Automation" />
-            <p className="login-tagline">Enterprise workflows, intelligently automated.</p>
+          <div className="login-brand-block" aria-label="Centum Automation Modules, CAM 3.4, powered by BuLLM">
+            <img className="login-centum-logo" src={theme === "light" ? centumLogo : centumLogoDark} alt="Centum" />
+            <span className="login-brand-name">CENTUM AUTOMATION MODULES</span>
+            <span className="login-brand-version">CAM 3.4</span>
+            <span className="login-brand-powered">POWERED BY <strong>BuLLM</strong></span>
           </div>
           <div className="login-copy">
             <span className="login-eyebrow">YOUR RFQ WORKSPACE</span>
             <h2 id="login-title">Welcome back</h2>
-            <p>Sign in to continue to CAM BOM Automation.</p>
           </div>
           <form className="login-form" onSubmit={submit}>
             <label htmlFor="cam-login-email">Work email</label>
