@@ -7,6 +7,7 @@ import {
   IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
+import { LoginPage } from "./LoginPage";
 import camLogoBlack from "./assets/cam-bom-automation-black.png";
 import camLogoWhite from "./assets/cam-bom-automation-white.png";
 import { useList } from "@refinedev/core";
@@ -14,7 +15,7 @@ import { dictationSupported, startDictation, stopDictation, useDictate } from ".
 import Uppy from "@uppy/core";
 import { CoverLetterEditor } from "./editor";
 import { BomGrid } from "./bomgrid";
-import { SKILLS, OUTPUTS, CHAT_START, REVIEW_LINE, type OutCard, type Skill } from "./data";
+import { SKILLS, OUTPUTS, type OutCard, type Skill } from "./data";
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
    to revert that piece to the approved base look. */
@@ -146,12 +147,13 @@ const REVIEW_CHECKS: Record<number, string[]> = {
 export default function App() {
   const { result } = useList<Skill>({ resource: "skills" });
   const skills: Skill[] = (result?.data?.length ? result.data : SKILLS) as Skill[];
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">(() => new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light");
+  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("cam-rfq-demo-auth") === "true");
   const [skillIdx, setSkillIdx] = useState(-1);
   const [subIdx, setSubIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>("idle");
   const [expanded, setExpanded] = useState<number | null>(null);
-  const [msgs, setMsgs] = useState<Msg[]>([{ who: "ai", text: "Upload the RFQ package - BOM, mechanical drawings or Gerber files - with Add files on the left to begin." }]);
+  const [msgs, setMsgs] = useState<Msg[]>([]);
   const [files, setFiles] = useState<{ name: string; status: "scanning" | "scanned" }[]>([]);
   // Uppy manages the picked files (same library BAM_UI uses for intake). The pickers
   // are real - the names listed are the files the user actually chose. Nothing is
@@ -178,21 +180,12 @@ export default function App() {
     if (!list) return;
     Array.from(list).forEach(f => { try { uppy.addFile({ name: f.name, type: f.type, data: f, source: "AddFilesMenu" }); } catch { /* duplicate or restricted */ } });
   };
-  const greeted = useRef(false);
-  useEffect(() => {
-    if (!greeted.current && files.length > 0 && files.every(f => f.status === "scanned")) {
-      greeted.current = true;
-      setMsgs(m => [...m, ...CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text }))]);
-    }
-  }, [files]);
   // Demo states for screenshots: ?demo=running|review|final
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.has("uploaded")) {
       const names = ["BOM_RFQ-1042.xlsx", "Bracket_drawing.pdf", "Gerbers_RFQ-1042.zip"];
       setFiles(names.map(name => ({ name, status: "scanned" as const })));
-      greeted.current = true;
-      setMsgs(m => [...m, ...CHAT_START.map(([who, text]) => ({ who: who as "ai" | "me", text }))]);
     }
     const d = params.get("demo");
     if (!d) return;
@@ -200,10 +193,6 @@ export default function App() {
     const i = map[d] ?? 4;
     setSkillIdx(i); setSubIdx(d === "running" || d === "bom" ? 2 : 3); setExpanded(i);
     setPhase(d === "running" || d === "bom" ? "running" : d === "final" ? "done" : "review");
-    const demoMessage = d === "final"
-      ? "The mock quote email has been sent. RFQ-1042 is complete - all 10 skills done."
-      : d === "review" ? REVIEW_LINE[10] : `${skills[i].name} is running.`;
-    setMsgs(m => [...m, { who: "ai", text: demoMessage }]);
   }, []);
   const [draft, setDraft] = useState("");
   const dic = useDictate();
@@ -222,13 +211,21 @@ export default function App() {
   const chatEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
-  useEffect(() => { if (new URLSearchParams(location.search).get("theme") === "dark") setTheme("dark"); }, []);
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const skill = skillIdx >= 0 ? skills[skillIdx] : null;
   const doneCount = phase === "done" ? skills.length : Math.max(0, skillIdx);
   const lastUserQuestion = [...msgs].reverse().find(m => m.who === "me")?.text ?? "";
   const promptSuggestions = getPromptSuggestions(lastUserQuestion, files, skill, phase);
+
+  const signInToDemo = () => {
+    sessionStorage.setItem("cam-rfq-demo-auth", "true");
+    setAuthenticated(true);
+  };
+  const signOutOfDemo = () => {
+    sessionStorage.removeItem("cam-rfq-demo-auth");
+    setAuthenticated(false);
+  };
 
   // Only the initial Start action and final quote approval are human-gated.
   useEffect(() => {
@@ -242,23 +239,18 @@ export default function App() {
         setExpanded(skillIdx + 1);
       } else {
         setPhase("review");
-        setMsgs(m => [...m, { who: "ai", text: REVIEW_LINE[skill.n] }]);
       }
     }, 500);
     return () => clearTimeout(t);
   }, [phase, subIdx, skillIdx]);
 
   const startRun = () => {
-    setMsgs(m => [...m, { who: "me", text: "Start Input Standardization" },
-      { who: "ai", text: "Input Standardization is starting." }]);
     setSkillIdx(0); setSubIdx(0); setPhase("running"); setExpanded(0);
   };
 
   const approve = () => {
     if (!skill || phase !== "review" || skillIdx !== skills.length - 1) return;
-    setMsgs(m => [...m, { who: "me", text: "Approve and send quote." }]);
     setPhase("done");
-    setMsgs(m => [...m, { who: "ai", text: "The mock quote email has been sent. RFQ-1042 is complete - all 10 skills done." }]);
   };
 
   const sendChat = (suggestion?: string) => {
@@ -272,6 +264,10 @@ export default function App() {
   const subStatus = (j: number) =>
     skillIdx < 0 ? "wait" : j < subIdx ? "done" : j > subIdx ? "wait" : phase === "review" ? "review" : phase === "done" ? "done" : "run";
 
+  if (!authenticated) {
+    return <LoginPage theme={theme} onToggleTheme={() => setTheme(theme === "light" ? "dark" : "light")} onSignIn={signInToDemo} />;
+  }
+
   return (
     <div className="app">
       <header className="top">
@@ -281,6 +277,7 @@ export default function App() {
           <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
             {theme === "light" ? <IconMoon size={16} /> : <IconSun size={16} />}
           </button>
+          <button className="signout-btn" onClick={signOutOfDemo}>Sign out</button>
           <div className="avatar">P</div>
         </div>
       </header>
