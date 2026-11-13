@@ -7,8 +7,8 @@ import { AllCommunityModule, ModuleRegistry, themeQuartz, colorSchemeLight, colo
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 export function BomGrid({ dark, columns, rows }: { dark: boolean; columns: string[]; rows: string[][] }) {
-  const theme = useMemo(() => themeQuartz.withPart(dark ? colorSchemeDark : colorSchemeLight).withParams({ fontFamily: 'inherit', fontSize: 14, headerFontSize: 16, headerFontWeight: 600, rowVerticalPaddingScale: 1.2, wrapperBorderRadius: 8, cellHorizontalPadding: 15 }), [dark]);
-  const colDefs = useMemo(() => { const widths: (number | undefined)[] = [56, undefined, 44, 78, 82]; return columns.map((c, i) => ({
+  const theme = useMemo(() => themeQuartz.withPart(dark ? colorSchemeDark : colorSchemeLight).withParams({ fontFamily: 'inherit', fontSize: 14, headerFontSize: 16, headerFontWeight: 600, rowVerticalPaddingScale: 1.2, wrapperBorderRadius: 8, cellHorizontalPadding: 10 }), [dark]);
+  const colDefs = useMemo(() => { const widths: (number | undefined)[] = [86, undefined, 54, 84, 86]; return columns.map((c, i) => ({
     field: `c${i}`, headerName: c, sortable: true, filter: false, resizable: false,
     suppressHeaderMenuButton: true, suppressMovable: true,
     ...(widths[i] ? { width: widths[i] } : { flex: 1, minWidth: 84 }),
