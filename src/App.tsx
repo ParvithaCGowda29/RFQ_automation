@@ -154,6 +154,19 @@ export default function App() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [expanded, setExpanded] = useState<number | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  // Empty-chat greeting: the BuLL floats in the top centre (BAM_UI orb treatment) and fades away on the first message.
+  const chatEmpty = msgs.length === 0;
+  const wasChatEmpty = useRef(chatEmpty);
+  const [greetLeaving, setGreetLeaving] = useState(false);
+  useEffect(() => {
+    if (wasChatEmpty.current && !chatEmpty) setGreetLeaving(true);
+    wasChatEmpty.current = chatEmpty;
+  }, [chatEmpty]);
+  useEffect(() => {
+    if (!greetLeaving) return;
+    const t = setTimeout(() => setGreetLeaving(false), 320);
+    return () => clearTimeout(t);
+  }, [greetLeaving]);
   const [files, setFiles] = useState<{ name: string; status: "scanning" | "scanned" }[]>([]);
   // Uppy manages the picked files (same library BAM_UI uses for intake). The pickers
   // are real - the names listed are the files the user actually chose. Nothing is
@@ -403,6 +416,18 @@ export default function App() {
             </button>
           </div>
           <div className="pane-b">
+            {chatEmpty && (
+              <div className="chat-empty">
+                <span className="ce-bull"><img src={bullHead} alt="" /></span>
+                <h3 className="ce-hello">How can BuLLM help you today?</h3>
+              </div>
+            )}
+            {greetLeaving && !chatEmpty && (
+              <div className="chat-empty ce-leaving" aria-hidden="true">
+                <span className="ce-bull"><img src={bullHead} alt="" /></span>
+                <h3 className="ce-hello">How can BuLLM help you today?</h3>
+              </div>
+            )}
             {msgs.map((m, i) => (
               <div key={i} className={"msg " + m.who}>
                 <div><div className="who">{m.who === "ai" ? "Assistant" : "You"}</div><div className="b">{m.text}</div></div>
@@ -420,7 +445,7 @@ export default function App() {
                 <span className="wave-t">{dic.phase === "requesting" ? "Requesting microphone..." : elapsed}</span>
               </div>
             ) : (
-              <input className="in" value={draft}
+              <input className="in" value={draft} placeholder="Ask BuLLM"
                 onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
             )}
             {dictationSupported && (
