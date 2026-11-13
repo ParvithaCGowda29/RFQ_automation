@@ -21,6 +21,7 @@ import { SKILLS, OUTPUTS, type OutCard, type Skill } from "./data";
    to revert that piece to the approved base look. */
 const FEAT = { progressBar: false, reviewPanel: false };
 const SUPPORTED_UPLOAD_TYPES = [".xlsx", ".xls", ".csv", ".pdf", ".zip", ".gbr", ".ger", ".gtl", ".gbl", ".txt", ".dxf"];
+const MAX_UPLOAD_FILES = 20;
 
 type DemoFile = { name: string; status: "scanning" | "scanned" };
 
@@ -174,7 +175,7 @@ export default function App() {
   // below are simulated intake statuses, not a real antivirus scan.
   const uppy = useMemo(() => new Uppy({
     id: "rfq-intake",
-    restrictions: { maxNumberOfFiles: 20, allowedFileTypes: SUPPORTED_UPLOAD_TYPES },
+    restrictions: { maxNumberOfFiles: MAX_UPLOAD_FILES, allowedFileTypes: SUPPORTED_UPLOAD_TYPES },
   }), []);
   const folderPick = useRef<HTMLInputElement>(null);
   const bulkPick = useRef<HTMLInputElement>(null);
@@ -190,8 +191,16 @@ export default function App() {
   }, [uppy]);
   const addPicked = (list: FileList | null) => {
     setAfOpen(false);
-    if (!list) return;
+    if (!list || list.length === 0) return;
+    const before = uppy.getFiles().length;
     Array.from(list).forEach(f => { try { uppy.addFile({ name: f.name, type: f.type, data: f, source: "AddFilesMenu" }); } catch { /* duplicate or restricted */ } });
+    const added = uppy.getFiles().length - before;
+    const total = list.length;
+    const skipped = total - added;
+    if (skipped > 0) {
+      const text = `Added ${added} of ${total} picked files. ${skipped} skipped - intake accepts up to ${MAX_UPLOAD_FILES} files at once and only these types: ${SUPPORTED_UPLOAD_TYPES.join(", ")}. Files already in the list are not added twice.`;
+      setMsgs(m => [...m, { who: "ai", text }]);
+    }
   };
   // Demo states for screenshots: ?demo=running|review|final
   useEffect(() => {
