@@ -4,7 +4,7 @@ import {
   IconClipboardCheck, IconDatabase, IconFiles, IconFileSpreadsheet, IconFileZip,
   IconFolder, IconGauge, IconInbox, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand,
   IconLink, IconMail, IconMessage, IconMicrophone, IconMoon, IconPencil, IconPlugConnected, IconPlus,
-  IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop,
+  IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop, IconLogout,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
 import { LoginPage } from "./LoginPage";
@@ -231,6 +231,16 @@ export default function App() {
   const lastUserQuestion = [...msgs].reverse().find(m => m.who === "me")?.text ?? "";
   const promptSuggestions = getPromptSuggestions(lastUserQuestion, files, skill, phase);
 
+  const [profileOpen, setProfileOpen] = useState(false);
+  // Profile menu closes on outside click and Escape (BAM_UI profile-menu pattern).
+  useEffect(() => {
+    if (!profileOpen) return;
+    const onDown = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest(".profile")) setProfileOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setProfileOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [profileOpen]);
   const signInToDemo = () => {
     sessionStorage.setItem("cam-rfq-demo-auth", "true");
     setAuthenticated(true);
@@ -290,8 +300,16 @@ export default function App() {
           <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
             {theme === "light" ? <IconMoon size={16} /> : <IconSun size={16} />}
           </button>
-          <button className="signout-btn" onClick={signOutOfDemo}>Sign out</button>
-          <div className="avatar">P</div>
+          <div className="profile">
+            <button className="avatar" onClick={() => setProfileOpen(o => !o)} aria-haspopup="menu" aria-expanded={profileOpen} aria-label="Profile" title="Profile">P</button>
+            {profileOpen && (
+              <div className="profile-menu" role="menu">
+                <button className="profile-item" role="menuitem" onClick={() => { setProfileOpen(false); signOutOfDemo(); }}>
+                  <IconLogout size={15} /> Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
