@@ -282,3 +282,12 @@ html[data-ge-landing] .mid .composer { visibility:hidden; }
 [data-theme="dark"] .gd h4.gd-s code { background:rgba(255,152,0,.16); color:#FFA726; }
 .gd p { margin:0; font-size:14px; line-height:1.55; }
 .gd .gd-foot { margin-top:14px; }
+
+/* Progressive panes after goal entry (BAM_UI Upload progression): middle only, then +files pane, then +output pane. */
+.main.ge-solo { grid-template-columns:minmax(0, 1fr); }
+.main.ge-solo .rail, .main.ge-solo .right { display:none; }
+.main.ge-two { grid-template-columns:clamp(320px, 32vw, 480px) minmax(0, 1fr); }
+.main.ge-two .right { display:none; }
+.main.ge-two .rail, .main:not(.ge-solo):not(.ge-two) .right { animation:gePaneIn .35s ease; }
+@keyframes gePaneIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce) { .main.ge-two .rail, .main:not(.ge-solo):not(.ge-two) .right { animation:none; } }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   IconAlertTriangle, IconBolt, IconChartBar, IconCheck,
   IconClipboardCheck, IconDatabase, IconFiles, IconFileSpreadsheet, IconFileZip,
@@ -7,7 +7,7 @@ import {
   IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop, IconLogout,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
-import { GoalEntry, GoalDraft, GOAL_PREFIX, GOAL_REPLY } from "./GoalEntry";
+import { GoalEntry, GoalDraft, GOAL_PREFIX } from "./GoalEntry";
 import { LoginPage } from "./LoginPage";
 import camLogoBlack from "./assets/cam-bom-automation-black.png";
 import camLogoWhite from "./assets/cam-bom-automation-white.png";
@@ -157,7 +157,7 @@ export default function App() {
   const skipGoalEntry = new URLSearchParams(location.search).has("demo") || new URLSearchParams(location.search).has("uploaded");
   const sendGoal = (text: string) => {
     setGoalText(text);
-    setMsgs([{ who: "me", text }, { who: "ai", text: GOAL_REPLY }]);
+    setMsgs([{ who: "me", text }]);
   };
   const [skillIdx, setSkillIdx] = useState(-1);
   const [subIdx, setSubIdx] = useState(0);
@@ -334,7 +334,9 @@ export default function App() {
 
       {goalText === null && !skipGoalEntry && <GoalEntry onSend={sendGoal} />}
 
-      <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")}>
+      <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "") +
+        // BAM pane progression: 1 middle only, 2 goal expanded (files pane opens), 3 files added (output pane opens).
+        (skipGoalEntry || goalText !== null ? (skipGoalEntry || files.length > 0 || skill ? "" : " ge-two") : " ge-solo")}>
         {/* LEFT RAIL - workflow (BAM_UI look) */}
         <section className={"pane rail" + (railMini ? " mini" : "")}>
           <div className="rail-h">
@@ -468,9 +470,18 @@ export default function App() {
               </div>
             )}
             {msgs.map((m, i) => (
-              <div key={i} className={"msg " + m.who}>
-                <div><div className="who">{m.who === "ai" ? "Assistant" : "You"}</div><div className="b">{m.text}</div></div>
-              </div>
+              <Fragment key={i}>
+                <div className={"msg " + m.who}>
+                  <div><div className="who">{m.who === "ai" ? "Assistant" : "You"}</div><div className="b">{m.text}</div></div>
+                </div>
+                {i === 0 && m.who === "me" && goalText && (
+                  <div className="msg ai">
+                    <div><div className="who">Assistant</div><div className="b gd-b">
+                      <GoalDraft tail={goalText.startsWith(GOAL_PREFIX) ? goalText.slice(GOAL_PREFIX.length) : goalText} />
+                    </div></div>
+                  </div>
+                )}
+              </Fragment>
             ))}
             <div ref={chatEnd} />
           </div>
@@ -505,14 +516,13 @@ export default function App() {
         <section className="pane right">
           <div className="pane-h">
             <IconBolt size={16} />
-            <div><h2>{!skill && goalText ? "Goal" : "Output"}</h2>
-              <div className="sub">{skill ? `${skill.name} - ${skill.subs[Math.min(subIdx, skill.subs.length - 1)].name}${phase === "review" ? " (human)" : ""}` : goalText ? "Expanded from your goal" : "No skill running yet"}</div>
+            <div><h2>Output</h2>
+              <div className="sub">{skill ? `${skill.name} - ${skill.subs[Math.min(subIdx, skill.subs.length - 1)].name}${phase === "review" ? " (human)" : ""}` : "No skill running yet"}</div>
             </div>
           </div>
           <div className="pane-b">
             {!skill && (
               <>
-                {goalText && <GoalDraft tail={goalText.startsWith(GOAL_PREFIX) ? goalText.slice(GOAL_PREFIX.length) : goalText} />}
                 {files.length > 0 && (
                 <div className="ocard">
                   <h3><span className="oi"><IconFileSpreadsheet size={15} /></span>Uploaded files</h3>
@@ -525,13 +535,11 @@ export default function App() {
                   ))}
                 </div>
                 )}
-                {!goalText && (
                 <div className="empty" style={{ height: "auto", marginTop: 32 }}>
                   <div className="ei"><IconBolt size={28} /></div>
                   <h3>Steps output appears here</h3>
                   <p>When a skill starts, its sub-skill steps and their output show up in this pane.</p>
                 </div>
-                )}
               </>
             )}
             {skill && skill.subs.map((sub, j) => {

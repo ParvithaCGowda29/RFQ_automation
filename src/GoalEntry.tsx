@@ -13,9 +13,6 @@ const EXAMPLES = [
   "RFQ responses for enclosure brackets in Europe",
 ];
 
-export const GOAL_REPLY =
-  "Got it - I've expanded your goal into the RFQ Response Agent draft on the right. Add the BOM, drawings and Gerbers on the left and I'll take it from there.";
-
 /** The cycling example: types out, holds, deletes, moves to the next. Ghost text only: it is never the input's value. */
 function useMarquee(active: boolean): string {
   const [text, setText] = useState(EXAMPLES[0]);
