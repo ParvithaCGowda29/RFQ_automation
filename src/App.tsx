@@ -7,6 +7,7 @@ import {
   IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop, IconLogout,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
+import { GoalEntry, GoalDraft, GOAL_PREFIX, GOAL_REPLY } from "./GoalEntry";
 import { LoginPage } from "./LoginPage";
 import camLogoBlack from "./assets/cam-bom-automation-black.png";
 import camLogoWhite from "./assets/cam-bom-automation-white.png";
@@ -150,6 +151,14 @@ export default function App() {
   const skills: Skill[] = (result?.data?.length ? result.data : SKILLS) as Skill[];
   const [theme, setTheme] = useState<"light" | "dark">(() => new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light");
   const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("cam-rfq-demo-auth") === "true");
+  // Goal entry (approved 13 Nov 2026 wireframes): shown after login until a goal is sent. Demo/screenshot URLs
+  // (?demo=, ?uploaded) skip it so those states keep working unchanged.
+  const [goalText, setGoalText] = useState<string | null>(null);
+  const skipGoalEntry = new URLSearchParams(location.search).has("demo") || new URLSearchParams(location.search).has("uploaded");
+  const sendGoal = (text: string) => {
+    setGoalText(text);
+    setMsgs([{ who: "me", text }, { who: "ai", text: GOAL_REPLY }]);
+  };
   const [skillIdx, setSkillIdx] = useState(-1);
   const [subIdx, setSubIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -256,6 +265,7 @@ export default function App() {
   };
   const signOutOfDemo = () => {
     sessionStorage.removeItem("cam-rfq-demo-auth");
+    setGoalText(null);
     setAuthenticated(false);
   };
 
@@ -321,6 +331,8 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {goalText === null && !skipGoalEntry && <GoalEntry onSend={sendGoal} />}
 
       <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")}>
         {/* LEFT RAIL - workflow (BAM_UI look) */}
@@ -493,13 +505,14 @@ export default function App() {
         <section className="pane right">
           <div className="pane-h">
             <IconBolt size={16} />
-            <div><h2>Output</h2>
-              <div className="sub">{skill ? `${skill.name} - ${skill.subs[Math.min(subIdx, skill.subs.length - 1)].name}${phase === "review" ? " (human)" : ""}` : "No skill running yet"}</div>
+            <div><h2>{!skill && goalText ? "Goal" : "Output"}</h2>
+              <div className="sub">{skill ? `${skill.name} - ${skill.subs[Math.min(subIdx, skill.subs.length - 1)].name}${phase === "review" ? " (human)" : ""}` : goalText ? "Expanded from your goal" : "No skill running yet"}</div>
             </div>
           </div>
           <div className="pane-b">
             {!skill && (
               <>
+                {goalText && <GoalDraft tail={goalText.startsWith(GOAL_PREFIX) ? goalText.slice(GOAL_PREFIX.length) : goalText} />}
                 {files.length > 0 && (
                 <div className="ocard">
                   <h3><span className="oi"><IconFileSpreadsheet size={15} /></span>Uploaded files</h3>
@@ -512,11 +525,13 @@ export default function App() {
                   ))}
                 </div>
                 )}
+                {!goalText && (
                 <div className="empty" style={{ height: "auto", marginTop: 32 }}>
                   <div className="ei"><IconBolt size={28} /></div>
                   <h3>Steps output appears here</h3>
                   <p>When a skill starts, its sub-skill steps and their output show up in this pane.</p>
                 </div>
+                )}
               </>
             )}
             {skill && skill.subs.map((sub, j) => {

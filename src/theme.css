@@ -236,3 +236,49 @@ button { font:inherit; color:inherit; }
 
 /* Costed BOM grid (ag-grid, same table library as BAM_UI) */
 .bom-grid { margin-top:6px; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+
+/* ---- Goal entry screen (13 Nov 2026, approved wf-goal-entry/open wireframes; BAM_UI layout + pane transition) ---- */
+.goal-entry { position:fixed; left:0; right:0; top:57px; bottom:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; padding-bottom:12vh; transition:opacity .3s ease; }
+.goal-entry.ge-exit { opacity:0; pointer-events:none; }
+[data-theme="light"] .goal-entry { background:radial-gradient(130% 90% at 50% 115%, #F0E8D3 0%, rgba(240,232,211,0) 55%), linear-gradient(180deg, #E9F2FA 0%, #F3F6FB 70%); }
+[data-theme="dark"] .goal-entry { background:radial-gradient(130% 90% at 50% 115%, #16241C 0%, rgba(22,36,28,0) 55%), linear-gradient(180deg, #0D1A2E 0%, #0B1526 70%); }
+.ge-head { font-size:32px; font-weight:800; letter-spacing:-.015em; text-align:center; color:var(--ink); display:flex; align-items:center; gap:10px; }
+.ge-bull { height:34px; width:auto; }
+.ge-lede { margin:12px 0 20px; font-size:14px; color:var(--ink2); }
+.ge-card { width:590px; max-width:90vw; display:flex; align-items:center; gap:10px; padding:10px 12px 10px 20px; border-radius:22px; border:1px solid var(--line); background:var(--card); box-shadow:0 12px 32px rgba(15,27,45,.10); }
+[data-theme="dark"] .ge-card { box-shadow:0 12px 32px rgba(0,0,0,.4); }
+.ge-textwrap { position:relative; flex:1; min-width:0; }
+.ge-input { display:block; width:100%; border:0; outline:none; resize:none; background:none; color:var(--ink); font:inherit; font-size:15px; line-height:1.45; padding:8px 0; max-height:160px; }
+.ge-ghost { position:absolute; inset:0; padding:8px 0; font-size:15px; line-height:1.45; pointer-events:none; white-space:pre-wrap; word-break:break-word; }
+.ge-input:focus-visible { box-shadow:none; }
+.ge-ghost-pre { visibility:hidden; }
+.ge-ghost-tail { color:var(--faint); }
+.ge-send { flex:none; width:40px; height:40px; border:0; border-radius:12px; display:grid; place-items:center; cursor:pointer; color:#fff; }
+[data-theme="light"] .ge-send { background:#7FA8C9; }
+[data-theme="dark"] .ge-send { background:#4A6899; }
+.ge-send:disabled { opacity:.45; cursor:default; }
+.ge-send:not(:disabled):hover { filter:brightness(1.08); }
+@media (prefers-reduced-motion: reduce) { .goal-entry { transition:none; } }
+
+/* Goal card flying to the assistant composer; the live composer stays hidden until it lands. */
+.ge-fly { position:fixed; z-index:200; display:flex; align-items:center; padding:10px 12px 10px 20px; border-radius:22px; overflow:hidden; pointer-events:none; }
+.ge-fly-text { font-size:15px; line-height:1.45; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ge-fly-ph { position:absolute; left:20px; font-size:14px; color:var(--faint); opacity:0; }
+html[data-ge-landing] .mid .composer { visibility:hidden; }
+
+/* ---- Expanded goal draft (right pane) ---- */
+.gd { padding:2px 2px 8px; }
+.gd-pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:12px; font-weight:600; margin-bottom:6px; }
+[data-theme="light"] .gd-pill { background:#F2F9FD; color:#006C99; }
+[data-theme="dark"] .gd-pill { background:rgba(91,131,242,.16); color:#8FA8F8; }
+.gd .gd-title { display:flex; align-items:center; gap:8px; font-size:16px; margin:4px 0 2px; }
+.gd .gd-title img { width:20px; height:20px; object-fit:contain; }
+.gd .gd-sub { font-size:12px; color:var(--ink2); margin:0 0 8px; }
+.gd h4 { display:flex; align-items:center; gap:8px; margin:12px 0 3px; font-size:14px; }
+.gd h4 code { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:6px; font:700 11px/1 inherit; }
+[data-theme="light"] .gd h4 code { background:#F2F9FD; color:#006C99; }
+[data-theme="dark"] .gd h4 code { background:rgba(91,131,242,.16); color:#8FA8F8; }
+[data-theme="light"] .gd h4.gd-s code { background:rgba(255,152,0,.14); color:#B86A00; }
+[data-theme="dark"] .gd h4.gd-s code { background:rgba(255,152,0,.16); color:#FFA726; }
+.gd p { margin:0; font-size:14px; line-height:1.55; }
+.gd .gd-foot { margin-top:14px; }
