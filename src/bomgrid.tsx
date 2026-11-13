@@ -12,7 +12,9 @@ export function BomGrid({ dark, columns, rows }: { dark: boolean; columns: strin
     field: `c${i}`, headerName: c, sortable: true, filter: false, resizable: false,
     suppressHeaderMenuButton: true, suppressMovable: true,
     ...(widths[i] ? { width: widths[i] } : { flex: 1, minWidth: 84 }),
-    ...(i > 1 ? { cellStyle: { textAlign: "right" as const }, headerClass: "ag-right-aligned-header" } : {}),
+    // BAM style: JetBrains Mono for part designators (IDs) and numeric values; descriptions stay Inter.
+    ...(i !== 1 ? { cellStyle: { fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 12.5, ...(i > 1 ? { textAlign: "right" as const } : {}) } } : {}),
+    ...(i > 1 ? { headerClass: "ag-right-aligned-header" } : {}),
   })); }, [columns]);
   const rowData = useMemo(() => rows.map(r => Object.fromEntries(r.map((v, i) => [`c${i}`, v]))), [rows]);
   return (
