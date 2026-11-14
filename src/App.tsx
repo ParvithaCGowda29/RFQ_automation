@@ -529,7 +529,7 @@ export default function App() {
                   {files.map(f => (
                     <div className="orow" key={f.name}><IconFileSpreadsheet size={14} /><span className="n">{f.name}</span>
                       {f.status === "scanned"
-                        ? <span className="m" style={{ color: "var(--blue)", display: "inline-flex", alignItems: "center", gap: 4 }}><IconCheck size={12} /> Scanned</span>
+                        ? <span className="m" style={{ color: "var(--blue)", display: "inline-flex", alignItems: "center" }} title="Scanned" role="img" aria-label="Scanned"><IconCircleCheckFilled size={15} /></span>
                         : <span className="m" style={{ color: "var(--ink2)" }}>Scanning...</span>}
                     </div>
                   ))}
