@@ -376,9 +376,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "") +
-        // BAM pane progression: 1 middle only, 2 goal expanded (files pane opens), 3 files added (output pane opens).
-        (files.length > 0 || skill ? "" : " ge-two")}>
+      <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")}>
         {/* LEFT RAIL - workflow (BAM_UI look) */}
         <section className={"pane rail" + (railMini ? " mini" : "")}>
           <div className="rail-h">
