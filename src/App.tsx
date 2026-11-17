@@ -198,6 +198,7 @@ export default function App() {
     id: "rfq-intake",
     restrictions: { maxNumberOfFiles: MAX_UPLOAD_FILES, allowedFileTypes: SUPPORTED_UPLOAD_TYPES },
   }), []);
+  const afWrap = useRef<HTMLDivElement>(null);
   const folderPick = useRef<HTMLInputElement>(null);
   const bulkPick = useRef<HTMLInputElement>(null);
   const zipPick = useRef<HTMLInputElement>(null);
@@ -272,6 +273,14 @@ export default function App() {
   const [afOpen, setAfOpen] = useState(() => new URLSearchParams(location.search).has("af"));
   const [uploadModal, setUploadModal] = useState<null | "folder" | "files" | "zip">(null);
   const [dropOver, setDropOver] = useState(false);
+  // Close the Add files menu only on a real outside press: the menu floats 4px
+  // below the wrap, so a hover-leave would close it mid-move before the click lands.
+  useEffect(() => {
+    if (!afOpen) return;
+    const onDocDown = (e: MouseEvent) => { if (!afWrap.current?.contains(e.target as Node)) setAfOpen(false); };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [afOpen]);
   const chatEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
@@ -433,7 +442,7 @@ export default function App() {
           ) : (
           <>
           <div className="pane-b">
-            <div className={"af-wrap" + (afOpen ? " open" : "")} onMouseLeave={() => setAfOpen(false)}>
+            <div ref={afWrap} className={"af-wrap" + (afOpen ? " open" : "")}>
               <button className="af-btn" aria-haspopup="menu" aria-expanded={afOpen} onClick={() => setAfOpen(!afOpen)}>
                 <IconPlus size={14} /> Add files
               </button>
