@@ -24,6 +24,15 @@ import { loadRuns, saveRun, statusLabel, type RunStatus } from "./runs";
    to revert that piece to the approved base look. Review panel switched on
    17 Nov 2026 - she asked for the approval gates to be wired in. */
 const FEAT = { progressBar: false, reviewPanel: true };
+const SwapIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    <path d="M3 4a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+    <path d="M15 16a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+    <path d="M21 11v-3a2 2 0 0 0 -2 -2h-6l3 3m0 -6l-3 3" />
+    <path d="M3 13v3a2 2 0 0 0 2 2h6l-3 -3m0 6l3 -3" />
+  </svg>
+);
 const SUPPORTED_UPLOAD_TYPES = [".xlsx", ".xls", ".csv", ".pdf", ".zip", ".gbr", ".ger", ".gtl", ".gbl", ".txt", ".dxf"];
 const MAX_UPLOAD_FILES = 20;
 
@@ -248,6 +257,16 @@ export default function App() {
   }, [listening]);
   const [railMini, setRailMini] = useState(() => new URLSearchParams(location.search).has("mini"));
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
+  const [paneOrder, setPaneOrder] = useState<string[]>(["rail", "mid", "right"]);
+  const swapPane = (id: string) => setPaneOrder(o => {
+    const i = o.indexOf(id);
+    const next = [...o];
+    if (i === 0) { next.push(next.shift()!); } // leftmost wraps to the far right; the rest shift one left
+    else { [next[i - 1], next[i]] = [next[i], next[i - 1]]; }
+    return next;
+  });
+  const paneCols = paneOrder.map((id, i) =>
+    (id === "rail" && railMini) || (id === "mid" && assistantCollapsed) ? "56px" : `minmax(0, ${[20, 40, 40][i]}fr)`).join(" ");
   const [afOpen, setAfOpen] = useState(() => new URLSearchParams(location.search).has("af"));
   const chatEnd = useRef<HTMLDivElement>(null);
 
@@ -378,10 +397,11 @@ export default function App() {
         </div>
       </header>
 
-      <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")}>
+      <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")} style={{ gridTemplateColumns: paneCols }}>
         {/* LEFT RAIL - workflow (BAM_UI look) */}
-        <section className={"pane rail" + (railMini ? " mini" : "")}>
+        <section className={"pane rail" + (railMini ? " mini" : "")} style={{ order: paneOrder.indexOf("rail") }}>
           <div className="rail-h">
+            {!railMini && <button className="iconbtn sm pane-swap" onClick={() => swapPane("rail")} aria-label="Swap the workflow pane one place left" title="Swap pane left"><SwapIcon /></button>}
             {!railMini && <h2>Agent - RFQ Automation</h2>}
             <button className="iconbtn sm" onClick={() => setRailMini(!railMini)} aria-expanded={!railMini}
               aria-label={railMini ? "Expand navigation" : "Collapse navigation"} title={railMini ? "Expand navigation" : "Collapse navigation"}>
@@ -483,7 +503,7 @@ export default function App() {
         </section>
 
         {/* MIDDLE - assistant chat */}
-        <section className={"pane mid" + (assistantCollapsed ? " collapsed" : "")}>
+        <section className={"pane mid" + (assistantCollapsed ? " collapsed" : "")} style={{ order: paneOrder.indexOf("mid") }}>
           {assistantCollapsed ? (
             <div className="assistant-rail-head">
               <button className="assistant-show" onClick={() => setAssistantCollapsed(false)} aria-expanded={false} aria-label="Show assistant">
@@ -493,6 +513,7 @@ export default function App() {
           ) : (
           <>
           <div className="pane-h">
+            <button className="iconbtn sm pane-swap" onClick={() => swapPane("mid")} aria-label="Swap the assistant pane one place left" title="Swap pane left"><SwapIcon /></button>
             <div className="assistant-title"><h2 className="assistant-heading">BuLLM assistant</h2></div>
             <button className="iconbtn sm assistant-hide" onClick={() => setAssistantCollapsed(true)} aria-expanded={true} aria-label="Hide assistant" title="Hide assistant">
               <IconLayoutSidebarLeftCollapse size={14} />
@@ -555,8 +576,9 @@ export default function App() {
         </section>
 
         {/* RIGHT - steps output */}
-        <section className="pane right">
+        <section className="pane right" style={{ order: paneOrder.indexOf("right") }}>
           <div className="pane-h">
+            <button className="iconbtn sm pane-swap" onClick={() => swapPane("right")} aria-label="Swap the output pane one place left" title="Swap pane left"><SwapIcon /></button>
             <IconBolt size={16} />
             <div><h2>Output</h2>
               <div className="sub">{skill ? `${skill.name} - ${skill.subs[Math.min(subIdx, skill.subs.length - 1)].name}${phase === "review" ? " (human)" : ""}` : "No skill running yet"}</div>
