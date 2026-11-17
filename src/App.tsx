@@ -18,6 +18,7 @@ import Uppy from "@uppy/core";
 import { CoverLetterEditor } from "./editor";
 import { BomGrid } from "./bomgrid";
 import { SKILLS, OUTPUTS, type OutCard, type Skill } from "./data";
+import { Masters } from "./Masters";
 import { loadRuns, saveRun, statusLabel, type RunStatus } from "./runs";
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
@@ -292,6 +293,7 @@ export default function App() {
   const promptSuggestions = getPromptSuggestions(lastUserQuestion, files, skill, phase);
 
   const [profileOpen, setProfileOpen] = useState(false);
+  const [view, setView] = useState<"rfq" | "masters">("rfq");
   // Profile menu closes on outside click and Escape (BAM_UI profile-menu pattern).
   useEffect(() => {
     if (!profileOpen) return;
@@ -401,6 +403,15 @@ export default function App() {
             <button className="avatar" onClick={() => setProfileOpen(o => !o)} aria-haspopup="menu" aria-expanded={profileOpen} aria-label="Profile" title="Profile">P</button>
             {profileOpen && (
               <div className="profile-menu" role="menu">
+                {view === "rfq" ? (
+                  <button className="profile-item" role="menuitem" onClick={() => { setProfileOpen(false); setView("masters"); }}>
+                    <IconDatabase size={15} /> Masters
+                  </button>
+                ) : (
+                  <button className="profile-item" role="menuitem" onClick={() => { setProfileOpen(false); setView("rfq"); }}>
+                    <IconBolt size={15} /> RFQ automation
+                  </button>
+                )}
                 <button className="profile-item" role="menuitem" onClick={() => { setProfileOpen(false); signOutOfDemo(); }}>
                   <IconLogout size={15} /> Sign out
                 </button>
@@ -410,6 +421,7 @@ export default function App() {
         </div>
       </header>
 
+      {view === "masters" ? <Masters /> : (
       <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")} style={{ gridTemplateColumns: paneCols }}>
         {/* LEFT RAIL - workflow (BAM_UI look) */}
         <section className={"pane rail" + (railMini ? " mini" : "")} style={{ order: paneOrder.indexOf("rail") }}>
@@ -711,6 +723,7 @@ export default function App() {
           )}
         </section>
       </div>
+      )}
       {uploadModal && (
         <div className="modal-veil" onClick={() => { setUploadModal(null); setDropOver(false); }}>
           <div className="modal" role="dialog" aria-label="Add files" onClick={e => e.stopPropagation()}>
