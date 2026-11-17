@@ -344,3 +344,4 @@ button.mrow:hover { border-color:var(--blue); }
 .mrow.hero { background:var(--chip); border-color:var(--blue); }
 .mrow.stage { padding:6px 10px; margin-bottom:6px; }
 .stage-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink2); margin:12px 0 6px; }
+.upload-note { margin:0 0 8px; font-size:12px; line-height:1.45; color:var(--ink2); }

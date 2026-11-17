@@ -209,10 +209,11 @@ export default function App() {
     const added = uppy.getFiles().length - before;
     const total = list.length;
     const skipped = total - added;
-    if (skipped > 0) {
-      const text = `Added ${added} of ${total} picked files. ${skipped} skipped - intake accepts up to ${MAX_UPLOAD_FILES} files at once and only these types: ${SUPPORTED_UPLOAD_TYPES.join(", ")}. Files already in the list are not added twice.`;
-      setMsgs(m => [...m, { who: "ai", text }]);
-    }
+    // Intake results belong with the file list, not in the chat: the assistant
+    // answers asked questions only.
+    setUploadNote(skipped > 0
+      ? `Added ${added} of ${total} picked files. ${skipped} skipped - intake accepts up to ${MAX_UPLOAD_FILES} files at once and only these types: ${SUPPORTED_UPLOAD_TYPES.join(", ")}. Files already in the list are not added twice.`
+      : "");
   };
   // Demo states for screenshots: ?demo=running|review|final
   useEffect(() => {
@@ -229,6 +230,7 @@ export default function App() {
     setPhase(d === "running" || d === "bom" ? "running" : d === "final" ? "done" : "review");
   }, []);
   const [draft, setDraft] = useState("");
+  const [uploadNote, setUploadNote] = useState("");
   const [runStart, setRunStart] = useState<{ t: number; files: string[] } | null>(null);
   const [runsOpen, setRunsOpen] = useState(false);
   const [openRunId, setOpenRunId] = useState<string | null>(null);
@@ -566,6 +568,7 @@ export default function App() {
                 {files.length > 0 && (
                 <div className="ocard">
                   <h3><span className="oi"><IconFileSpreadsheet size={15} /></span>Uploaded files</h3>
+                  {uploadNote && <p className="upload-note">{uploadNote}</p>}
                   {files.map(f => (
                     <div className="orow" key={f.name}><IconFileSpreadsheet size={14} /><span className="n">{f.name}</span>
                       {f.status === "scanned"
