@@ -274,21 +274,18 @@ export function ExtractFlow({dark,scope,masters,onClose,onImport}:Props){
     <div className="ex-sources">
      <button type="button" className="ex-source" onClick={()=>setOnyxOpen(true)}>
       <span className="ex-icon" aria-hidden="true"><IconStack2 size={15}/></span>
-      <strong>Onyx</strong>
+      <div className="ex-source-head"><strong>Onyx</strong>{onyxCfg&&onyxConnected?<span className="ex-badge">Connected</span>:<span className="ex-badge am-off">Not connected</span>}</div>
       <small>{onyxCfg&&onyxConnected?`Linked to ${(()=>{try{return new URL(onyxCfg.url).host}catch{return 'your Onyx server'}})()}. Files you tick are sent to Onyx to read and index.`:onyxCfg?'Connection saved. Open to test or update it.':'Connect your Onyx server so it reads and indexes the picked files.'}</small>
-      <span className={'ex-badge'+(onyxCfg&&onyxConnected?'':' am-off')}>{onyxCfg&&onyxConnected?'Connected':'Not connected'}</span>
      </button>
      <button type="button" className="ex-source" disabled title="SharePoint needs company sign-in and a backend service, which this app doesn't have yet">
       <span className="ex-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.7 1.6A4 4 0 0 0 6 19z"/></svg></span>
-      <strong>SharePoint</strong>
-      <small>Not connected. Company sign-in and a backend service are needed first.</small>
-      <span className="ex-badge off">Not connected</span>
+      <div className="ex-source-head"><strong>SharePoint</strong><span className="ex-badge am-off">Not connected</span></div>
+      <small>Company sign-in and a backend service are needed first.</small>
      </button>
      <button type="button" className="ex-source" disabled title="Google Drive needs sign-in and a backend service, which this app doesn't have yet">
       <span className="ex-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.7 1.6A4 4 0 0 0 6 19z"/></svg></span>
-      <strong>Google Drive</strong>
-      <small>Not connected. Sign-in and a backend service are needed first.</small>
-      <span className="ex-badge off">Not connected</span>
+      <div className="ex-source-head"><strong>Google Drive</strong><span className="ex-badge am-off">Not connected</span></div>
+      <small>Sign-in and a backend service are needed first.</small>
      </button>
     </div>
     {pickError&&<p role="alert" className="bulk-error">{pickError}</p>}
@@ -300,12 +297,12 @@ export function ExtractFlow({dark,scope,masters,onClose,onImport}:Props){
     <div className="ex-access" role="radiogroup" aria-label="Access level">
      <button type="button" role="radio" aria-checked={access==='write'} className={'ex-access-card'+(access==='write'?' am-on':'')} onClick={()=>setAccess('write')}>
       <strong>Read-write <span>(Extract + authorize)</span></strong>
-      <small>BuLLM reads the ticked files, maps their content into the master columns, and adds the rows you approve on the review step.</small>
+      <small>CAM reads the ticked files, maps their content into the master columns, and adds the rows you approve on the review step.</small>
      </button>
     </div>
     <div className="ex-perm">
      <div>
-      <p className="ex-label">1. CHOOSE WHAT BULLM MAY READ</p>
+      <p className="ex-label">1. CHOOSE WHAT CAM MAY READ</p>
       <div className="ex-panel">
        {files.map((p,i)=>{
         const typeOff=p.kind==='table'&&!extOk(p.file.name,types);
@@ -343,8 +340,8 @@ export function ExtractFlow({dark,scope,masters,onClose,onImport}:Props){
        <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg> Review the mapping<small>You - next step</small></p>
        <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg> Approve the import<small>You - final step</small></p>
       </div>
-      <p className="ex-note">BuLLM can only read the files you picked here. Unticked files are never opened.</p>
-      <p className="ex-note amber">This choice limits what BuLLM extracts in this job. It does not change your device or account permissions. You can stop the job at any time.</p>
+      <p className="ex-note">CAM can only read the files you picked here. Unticked files are never opened.</p>
+      <p className="ex-note amber">This choice limits what CAM extracts in this job. It does not change your device or account permissions. You can stop the job at any time.</p>
      </div>
     </div>
    </>}
