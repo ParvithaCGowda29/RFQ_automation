@@ -210,8 +210,10 @@ export default function App() {
     uppy.on("file-added", onAdded);
     return () => { uppy.off("file-added", onAdded); };
   }, [uppy]);
-  const addPicked = (list: FileList | null) => {
+  const addPicked = (list: FileList | File[] | null) => {
     setAfOpen(false);
+    setUploadModal(null);
+    setDropOver(false);
     if (!list || list.length === 0) return;
     const before = uppy.getFiles().length;
     Array.from(list).forEach(f => { try { uppy.addFile({ name: f.name, type: f.type, data: f, source: "AddFilesMenu" }); } catch { /* duplicate or restricted */ } });
@@ -268,6 +270,8 @@ export default function App() {
   const paneCols = paneOrder.map((id, i) =>
     (id === "rail" && railMini) || (id === "mid" && assistantCollapsed) ? "56px" : `minmax(0, ${[20, 40, 40][i]}fr)`).join(" ");
   const [afOpen, setAfOpen] = useState(() => new URLSearchParams(location.search).has("af"));
+  const [uploadModal, setUploadModal] = useState<null | "folder" | "files" | "zip">(null);
+  const [dropOver, setDropOver] = useState(false);
   const chatEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
@@ -434,9 +438,9 @@ export default function App() {
                 <IconPlus size={14} /> Add files
               </button>
               <div className="af-menu" role="menu" aria-label="Add files">
-                <button role="menuitem" className="af-item" onClick={() => folderPick.current?.click()}><IconFolder size={16} /> Choose folder</button>
-                <button role="menuitem" className="af-item" onClick={() => bulkPick.current?.click()}><IconFiles size={16} /> Bulk upload</button>
-                <button role="menuitem" className="af-item" onClick={() => zipPick.current?.click()}><IconFileZip size={16} /> Upload zip</button>
+                <button role="menuitem" className="af-item" onClick={() => { setAfOpen(false); setUploadModal("folder"); }}><IconFolder size={16} /> Choose folder</button>
+                <button role="menuitem" className="af-item" onClick={() => { setAfOpen(false); setUploadModal("files"); }}><IconFiles size={16} /> Bulk upload</button>
+                <button role="menuitem" className="af-item" onClick={() => { setAfOpen(false); setUploadModal("zip"); }}><IconFileZip size={16} /> Upload zip</button>
                 <input ref={folderPick} type="file" multiple hidden {...({ webkitdirectory: "" } as object)} onChange={e => { addPicked(e.target.files); e.target.value = ""; }} />
                 <input ref={bulkPick} type="file" multiple hidden onChange={e => { addPicked(e.target.files); e.target.value = ""; }} />
                 <input ref={zipPick} type="file" accept=".zip,application/zip" hidden onChange={e => { addPicked(e.target.files); e.target.value = ""; }} />
@@ -698,6 +702,34 @@ export default function App() {
           )}
         </section>
       </div>
+      {uploadModal && (
+        <div className="modal-veil" onClick={() => { setUploadModal(null); setDropOver(false); }}>
+          <div className="modal" role="dialog" aria-label="Add files" onClick={e => e.stopPropagation()}>
+            <div className="modal-h">
+              <h3>{uploadModal === "folder" ? "Choose folder" : uploadModal === "zip" ? "Upload zip" : "Bulk upload"}</h3>
+              <button className="iconbtn sm" onClick={() => setUploadModal(null)} aria-label="Close add files"><IconX size={14} /></button>
+            </div>
+            <div
+              className={"up-drop" + (dropOver ? " over" : "")}
+              onDragOver={e => { e.preventDefault(); setDropOver(true); }}
+              onDragLeave={() => setDropOver(false)}
+              onDrop={e => {
+                e.preventDefault();
+                const dropped = Array.from(e.dataTransfer.files);
+                addPicked(uploadModal === "zip" ? dropped.filter(f => /\.zip$/i.test(f.name)) : dropped);
+              }}
+            >
+              <IconFiles size={22} />
+              <span>Drag and drop {uploadModal === "zip" ? "a zip file" : "files"} here</span>
+              <span className="up-or">or</span>
+              <button className="rbtn ghost up-browse" onClick={() => (uploadModal === "folder" ? folderPick : uploadModal === "zip" ? zipPick : bulkPick).current?.click()}>
+                {uploadModal === "folder" ? "Browse folders" : "Browse files"}
+              </button>
+            </div>
+            <p className="up-types">Allowed file types: {uploadModal === "zip" ? ".zip" : SUPPORTED_UPLOAD_TYPES.join(", ")}</p>
+          </div>
+        </div>
+      )}
       {runsOpen && (() => {
         const runs = loadRuns();
         const openRun = runs.find(r => r.id === openRunId) || null;
