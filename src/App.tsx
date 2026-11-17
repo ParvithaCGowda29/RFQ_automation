@@ -18,7 +18,7 @@ import Uppy from "@uppy/core";
 import { CoverLetterEditor } from "./editor";
 import { BomGrid } from "./bomgrid";
 import { SKILLS, OUTPUTS, type OutCard, type Skill } from "./data";
-import { Masters } from "./Masters";
+import { MastersApp } from "./masters/MastersApp";
 import { loadRuns, saveRun, statusLabel, type RunStatus } from "./runs";
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
@@ -391,6 +391,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {view === "rfq" && (
       <header className="top">
         <img className="wm-logo" src={theme === "light" ? camLogoBlack : camLogoWhite} alt="CAM BOM Automation" />
         <div className="top-right">
@@ -420,8 +421,9 @@ export default function App() {
           </div>
         </div>
       </header>
+      )}
 
-      {view === "masters" ? <Masters /> : (
+      {view === "masters" ? <MastersApp dark={theme === "dark"} onToggleTheme={() => setTheme(theme === "light" ? "dark" : "light")} onBack={() => setView("rfq")} /> : (
       <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")} style={{ gridTemplateColumns: paneCols }}>
         {/* LEFT RAIL - workflow (BAM_UI look) */}
         <section className={"pane rail" + (railMini ? " mini" : "")} style={{ order: paneOrder.indexOf("rail") }}>

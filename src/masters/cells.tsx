@@ -1,0 +1,174 @@
+import type {ReactNode} from 'react';
+import type {ICellRendererParams} from 'ag-grid-community';
+import type {RecordRow} from './provider';
+export type Hits=Map<string,Map<string,readonly (readonly [number,number])[]>>;
+// Split a cell on top-level commas, semicolons and colons followed by a space (so URLs,
+// times and IDs like ORG:01 stay whole; a label keeps its colon). Delimiters inside (), [] or {} stay put, so grouped
+// names like "Policies (IT, HR, RBAC)" remain one item. Offsets refer to the original
+// text so search highlighting still lines up.
+export function splitTopLevel(text:string):{value:string;start:number}[]{
+ const parts:{value:string;start:number}[]=[];let depth=0,start=0;
+ for(let i=0;i<text.length;i++){const c=text[i];
+  if(c==='('||c==='['||c==='{')depth++;
+  else if(c===')'||c===']'||c==='}')depth=Math.max(0,depth-1);
+  else if(!depth&&c===','&&!(/\d/.test(text[i-1]??'')&&/\d/.test(text[i+1]??''))){parts.push({value:text.slice(start,i),start});start=i+1;}
+  else if(!depth&&c===';'){parts.push({value:text.slice(start,i),start});start=i+1;}
+  else if(!depth&&c===':'&&(i+1>=text.length||/\s/.test(text[i+1]))){parts.push({value:text.slice(start,i+1),start});start=i+1;}
+ }
+ parts.push({value:text.slice(start),start});
+ return parts;
+}
+// Display-only: comma, semicolon and colon separated items stack one per line inside the same cell and parent
+// row. The stored value, ID and record count never change. Search matches still highlight.
+// Display-only: each stacked item starts with a capital letter. Only an ASCII lowercase
+// first letter changes, so acronyms (ICP) keep their case, lengths and highlight offsets
+// stay stable, and the stored value is untouched. Links stay as typed (case-sensitive).
+export function capitalizeItem(text:string):string{
+ if(/^(?:[a-z][a-z0-9+.-]*:\/\/|www\.)/i.test(text))return text;
+ const c=text.charCodeAt(0);
+ return c>=97&&c<=122?String.fromCharCode(c-32)+text.slice(1):text;
+}
+export function StackedHighlight(p:ICellRendererParams<RecordRow,string>&{hlKey:string}){
+ const text=p.value??'';const ranges=(p.context.current as Hits).get(p.data?.id??'')?.get(p.hlKey);
+ const mark=(seg:string,offset:number,key:number):ReactNode=>{
+  if(!ranges?.length)return seg;
+  const out:ReactNode[]=[];let at=0;
+  for(const [s,e] of [...ranges].sort((a,b)=>a[0]-b[0])){
+   const from=Math.max(s-offset,0,at),to=Math.min(e-offset,seg.length-1);
+   if(to<at||s-offset>seg.length-1||e-offset<0)continue;
+   out.push(seg.slice(at,from),<mark className="hit" key={from}>{seg.slice(from,to+1)}</mark>);
+   at=to+1;
+  }
+  out.push(seg.slice(at));
+  return <span key={key}>{out}</span>;
+ };
+ // Each URL inside a displayed line becomes a real link with a small link icon beside it,
+ // so the indicator sits next to the actual links in their cells instead of a page-level
+ // badge. Trailing sentence punctuation stays out of the href. Offsets stay absolute so
+ // search highlighting still lines up.
+ const line=(seg:string,offset:number):ReactNode=>{
+  const re=/(https?:\/\/|www\.)[^\s]*/gi;const out:ReactNode[]=[];let at=0,key=0,m:RegExpExecArray|null;
+  while((m=re.exec(seg))){
+   let url=m[0],trail='';
+   while(url&&/[.,;:!?)\]}'"]/.test(url.slice(-1))){trail=url.slice(-1)+trail;url=url.slice(0,-1);}
+   if(!url){url=m[0];trail='';}
+   if(m.index>at)out.push(<span key={key++}>{mark(seg.slice(at,m.index),offset+at,0)}</span>);
+   const href=/^www\./i.test(url)?`https://${url}`:url;
+   out.push(<a key={key++} className="cell-link" href={href} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>{mark(url,offset+m.index,0)}<svg className="cell-link-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>);
+   at=m.index+m[0].length;
+   if(trail)out.push(<span key={key++}>{mark(trail,offset+m.index+url.length,0)}</span>);
+  }
+  if(at<seg.length)out.push(<span key={key++}>{mark(seg.slice(at),offset+at,0)}</span>);
+  return out.length===1?out[0]:<>{out}</>;
+ };
+ const parts=splitTopLevel(text).map(part=>({...part,trimmed:part.value.trim()})).filter(part=>part.trimmed);
+ if(parts.length<2){const only=parts[0];return only?line(only.trimmed,only.start+(only.value.length-only.value.trimStart().length)):'';}
+ return <span className="stacked">{parts.map((part,i)=>{const lead=part.value.length-part.value.trimStart().length;return <span className="stacked-item" key={i}>{line(capitalizeItem(part.trimmed),part.start+lead)}</span>;})}</span>;
+}
+
+// Link-only cells (Organization > Data Sources and Customers / Audience): the cell stores
+// just a link per line, optionally behind a "Label:" line, and shows only the link text.
+// A cell with no link falls back to the normal stacked display.
+const LINK_RE=/^(?:[a-z][a-z0-9+.-]*:\/\/|www\.)\S+$/i;
+export function LinkOnlyCell(p:ICellRendererParams<RecordRow,string>&{hlKey:string}){
+ const text=p.value??'';
+ const heading=p.colDef?.headerName||'';
+ const section=heading==='Customers / Audience'?'audience':heading==='Systems / tools (Software)'?'systems':heading==='Assets (Hardware)'?'assets':'data-sources';
+ const orgId=(p.data?.values[0]||'organization').toLowerCase().replace(/[^a-z0-9-]+/g,'-');
+ const displayText=text.trim().toLowerCase()==='link'?`https://portal.bullm.example/organizations/${orgId}/${section}`:text;
+ const parts=splitTopLevel(displayText).map(x=>x.value.trim()).filter(Boolean);
+ if(!parts.some(x=>LINK_RE.test(x)))return StackedHighlight(p);
+ const items:string[]=[];
+ for(let i=0;i<parts.length;i++){
+  const part=parts[i];
+  if(LINK_RE.test(part))items.push(part);
+  else if(part.endsWith(':')&&LINK_RE.test(parts[i+1]||'')){items.push(parts[i+1]);i++;}
+  else items.push(capitalizeItem(part));
+ }
+ const hrefFor=(item:string)=>{const candidate=/^www\./i.test(item)?`https://${item}`:item;try{const url=new URL(candidate);return url.protocol==='http:'||url.protocol==='https:'?url.href:null}catch{return null}};
+ return <span className="stacked">{items.map((item,i)=>{const href=hrefFor(item);return <span className="stacked-item" key={i}>{href?<a className="cell-link" href={href} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>{item}<svg className="cell-link-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>:item}</span>})}</span>;
+}
+
+// Data Sources (her call, 2026-11-15): the cell shows the file path/link and nothing else.
+// Descriptive text stored next to a link is not rendered; the stored value itself is unchanged,
+// so older saved rows display the same way without any data reset.
+export function PathOnlyCell(p:ICellRendererParams<RecordRow,string>&{hlKey:string}){
+ const text=(p.value??'').trim();
+ if(!text)return StackedHighlight(p);
+ const parts=splitTopLevel(text).map(x=>x.value.trim()).filter(Boolean);
+ const links=parts.filter(x=>LINK_RE.test(x));
+ if(!links.length)return StackedHighlight(p);
+ return <span className="stacked">{links.map((item,i)=>{const candidate=/^www\./i.test(item)?`https://${item}`:item;let href:string|null=null;try{const url=new URL(candidate);href=url.protocol==='http:'||url.protocol==='https:'?url.href:null}catch{}return <span className="stacked-item" key={i}>{href?<a className="cell-link" href={href} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>{item}<svg className="cell-link-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>:item}</span>})}</span>;
+}
+
+// Agents master (2026-11-03 approved wireframes): three agent types, a reference link for
+// proposed agents, an Imported tag that shows on row hover only, and every step as a skill.
+export function AgentTypeCell(p:ICellRendererParams<RecordRow,string>){
+ const raw=(p.value??'').trim();if(!raw)return '';
+ // Type reads Internal / External: Third-party is External under her rename (2026-11-16).
+ // Stored values stay as they are; only the pill text changes.
+ const v=/^third/i.test(raw)?'External':raw;
+ const key=/^internal$/i.test(v)?'internal':/^external$/i.test(v)?'third':/^proposed$/i.test(v)?'proposed':'';
+ return <span className={'agent-type'+(key?' '+key:'')}>{v}</span>;
+}
+// "Enhances: AG-02 · Costing Agent" - the verb stays quiet, the target reads as a link. Empty shows a dash.
+export function AgentRefCell(p:ICellRendererParams<RecordRow,string>){
+ const v=(p.value??'').trim();
+ if(!v)return <span className="agent-ref-empty">—</span>;
+ const m=/^(Enhances|Integrates)\s*:\s*(.+)$/i.exec(v);
+ if(!m){
+  const cross=/^(Cross-cutting)\s*:\s*(.+)$/i.exec(v);
+  if(cross)return <span className="agent-ref"><span className="agent-ref-verb">{cross[1]}:</span> <span className="agent-ref-cross">{cross[2]}</span></span>;
+  return <span>{v}</span>;
+ }
+ return <span className="agent-ref"><span className="agent-ref-verb">{m[1]}:</span> <span className="agent-ref-target">{m[2]}<svg className="link-indicator" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{marginLeft:3,verticalAlign:'-1px'}}><path d="M7 17L17 7M9 7h8v8"/></svg></span></span>;
+}
+// "Built in BuLLM" stays plain. "Imported · <path>" carries the Imported tag, visible only on row hover.
+export function AgentSourceCell(p:ICellRendererParams<RecordRow,string>){
+ const v=(p.value??'').trim();if(!v)return '';
+ const m=/^Imported\s*·\s*(.+)$/i.exec(v);
+ if(!m)return <span className="agent-source-plain">{v}</span>;
+ return <span className="agent-source"><span className="imported-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg> Imported</span><span className="agent-source-path">{m[1]}</span></span>;
+}
+
+// Agents master (2026-11-04 approved wireframes): Kind pill - neutral Agent, violet Assistant.
+export function AgentKindCell(p:ICellRendererParams<RecordRow,string>){
+ const v=(p.value??'').trim();if(!v)return '';
+ return <span className={'agent-kind '+(/^assistant$/i.test(v)?'assistant':'agent')}>{v}</span>;
+}
+// Agents master Tools column: one neutral chip per tool (semicolon separated).
+export function ToolChipsCell(p:ICellRendererParams<RecordRow,string>){
+ const v=(p.value??'').trim();if(!v)return '';
+ const tools=v.split(';').map(s=>s.trim()).filter(Boolean);
+ return <span className="tool-chips">{tools.map((tool,i)=><span className="tool-chip" key={i}>{tool}</span>)}</span>;
+}
+
+export function SkillChipsCell(p:ICellRendererParams<RecordRow,string>){
+ const v=(p.value??'').trim();if(!v)return '';
+ const skills=v.split(';').map(s=>s.trim()).filter(Boolean);
+ return <span className="skill-chips">{skills.map((skill,i)=><span className="skill-chip" key={i}><span className="skill-chip-n">{i+1} &middot;</span> {skill}</span>)}</span>;
+}
+
+// Skill factory link cells (Agents and Next columns): the linked agent or the skill that
+// runs next reads as a link, mirroring the Agents master reference link. Empty shows a dash.
+export function SkillLinkCell(p:ICellRendererParams<RecordRow,string>){
+ const v=(p.value??'').trim();
+ if(!v)return <span className="skill-link-empty">&mdash;</span>;
+ return <span className="skill-link">{v}<svg className="link-indicator" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{marginLeft:3,verticalAlign:'-1px'}}><path d="M7 17L17 7M9 7h8v8"/></svg></span>;
+}
+
+// Skills References column (2026-11-11 approved ISATVON wireframes): each reference is one
+// chip - a blue Organisation chip, or a grey Tool Factory chip when it starts with a TF id.
+// The cell stores semicolon separated references; TF chips reuse the Tool Factory chip style.
+export function ReferenceChipsCell(p:ICellRendererParams<RecordRow,string>){
+ const v=(p.value??'').trim();if(!v)return '';
+ const refs=v.split(';').map(s=>s.trim()).filter(Boolean);
+ return <span className="tool-chips">{refs.map((ref,i)=><span className={/^TF-/i.test(ref)?'tool-chip':'skill-chip'} key={i}>{ref}</span>)}</span>;
+}
+
+// Skill factory Rules column: one green chip per linked rule (semicolon separated).
+export function RuleChipsCell(p:ICellRendererParams<RecordRow,string>){
+ const v=(p.value??'').trim();if(!v)return '';
+ const rules=v.split(';').map(s=>s.trim()).filter(Boolean);
+ return <span className="rule-chips">{rules.map((rule,i)=><span className="rule-chip" key={i}>{rule}</span>)}</span>;
+}

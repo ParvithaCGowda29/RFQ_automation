@@ -1,0 +1,873 @@
+{
+ "readme": [
+  [
+   "CAM masters",
+   "RFQ automation",
+   "Private working catalog / 17 November 2026"
+  ],
+  [
+   "Layout",
+   "Same masters as Admin_Masters",
+   "The three masters keep the Admin_Masters structure exactly: same fixed column names, one table per master. Only the contents change to CAM (RFQ automation)."
+  ],
+  [
+   "Contents",
+   "Organisations, Skill factory, Tool Factory",
+   "Organisations: Centum Electronics, the CAM subject. Skill factory: the ten CAM RFQ skills in ISATVON format. Tool Factory: the 30 tools, systems, servers and APIs the CAM material names. Rules live inside Organisations."
+  ],
+  [
+   "Sources",
+   "CAM Drive folder, 17 Nov 2026",
+   "Logical Data Model; CAM component API Parameters; Costed BOM Input Template; Scrub BOM instructions; CAM_Process_Steps; CAM RFQ automation OPEN items (17 Oct); Multilevel BOM Logic; Costed BOM Check Expert Feedback; FastMCP doc; Tools Used in CAM; Commodity Master report; Master edge cases; the CAM 4.0 skills note. Cells the material does not cover are left blank, not invented."
+  ]
+ ],
+ "sheets": [
+  {
+   "name": "Organization",
+   "headers": [
+    "Org ID",
+    "Company / Type",
+    "Brand Properties",
+    "Location",
+    "Certifications",
+    "Company Segment / Niche / Offerings",
+    "Customers / Audience",
+    "Employees / Job Role",
+    "Data Sources",
+    "Systems / tools (Software)",
+    "Assets (Hardware)",
+    "FDE Notes",
+    "Documents",
+    "Artifacts"
+   ],
+   "descriptions": [
+    "Stable unit or resource ID",
+    "Company / business unit name and type (HQ, branch, department or resource)",
+    "Website / GBP / Social Media",
+    "Registered address",
+    "Company/business unit certifications. Certificate on the first line; Validity (dd-mm-yyyy) on the second line.",
+    "Company segment/niche, context and goal priorities; approved services / offers",
+    "ICP / customer segments as four stacked lines: Customers, Suppliers, Audience, Other. One label per line, content after it.",
+    "Named roles and approval owners",
+    "Governed document / source versions. One linked document per line, each opening its own file or sheet.",
+    "Software only. Feeder: BuLLM Tech Stack & Tool Factory > Repo Library. Store canonical repo / Tooling ID, version and tenant account refs; no credentials. See README feeder note. Reference mapping, not live sync.",
+    "Physical hardware only: asset ID, device/equipment type, assigned unit/owner and inventory/evidence ref. Legacy unclassified values retained pending review; not hardware verification.",
+    "Changes, exceptions and open gaps"
+   ],
+   "rows": [
+    {
+     "id": "wr-1",
+     "values": [
+      "ORG-01",
+      "Centum Electronics - EMS manufacturer (CAM client)",
+      "",
+      "India (INR-based costing)",
+      "",
+      "Electronics manufacturing services: PCB assembly (SMT/PTH), box build, multilevel BOM builds. Projects seen in the material: CE-005570 (TI Clean Mobility HCV BMS), CE-005530_2433 (Signata VW MQB ST2 Redesign).",
+      "Customers: TI - Clean Mobility HCV BMS; Signata - VW MQB ST2 Redesign; Mahle and Knorr (validation checklists).\nSuppliers: electronic component manufacturers and distributors (TDK seen as example).\nAudience: Centum sourcing, commodity and sales teams; senior management (analytics requesters).",
+      "Jagadish Singh - Head of Procurement.\nCommodity owners (part-to-commodity mapping): Sathish, Spoorthi, Kavi, Srinivas.",
+      "InforLN ERP (approx. 43,000 MPNs; data current to 18 Dec 2024).\nQuoteWin exports (AWARDS_PART_NUMBER_LISTING_*_FLOAT_*).\nSFDC (customer and project IDs - CRM choice still open).\nSupplier quotes by email; Scrub BOM workbooks per RFQ.",
+      "InforLN ERP; QuoteWin; CAMerge (CBOM reports, by Ultiweb); CAMind (analytics); CAM 4.0 RFQ automation on BuLLM/BAM (in build); Superset dashboards (planned).",
+      "",
+      "Commodity master built by DigitalBull AI from one year of ERP data (Dec 2024). Several masters still to be confirmed by Centum IT: Inventory master, Commodity-wise supplier master, Manufacturer list, Customer master, Costing method, Supplier scorecard (flagged per field in the Logical Data Model).",
+      "",
+      ""
+     ],
+     "sourceRow": 2
+    }
+   ],
+   "readOnly": false
+  },
+  {
+   "name": "Skills",
+   "headers": [
+    "Skill ID",
+    "Skill",
+    "I · Instruction",
+    "S · Source data",
+    "A · Automation",
+    "T · Tech stack",
+    "V · Variables",
+    "O · Outcome",
+    "N · Next",
+    "References"
+   ],
+   "descriptions": [
+    "Stable skill key, assigned automatically when the row is added; not editable",
+    "Skill name",
+    "Instruction: what the skill does, step by step",
+    "Source data: the inputs the skill reads",
+    "Automation: when the skill runs - schedule or trigger",
+    "Tech stack: the APIs, models and tools the skill runs on",
+    "Variables: the values the skill captures and passes on",
+    "Outcome: what the skill produces",
+    "Next: the skill or step that runs next",
+    "Linked Organisations (blue chips) and Tool Factory entries (grey TF chips). Rules live inside Organisations."
+   ],
+   "rows": [
+    {
+     "id": "wr-1",
+     "values": [
+      "SK-01",
+      "Input Standardization",
+      "Ingest and register: receive the RFQ package (BOM, mechanical drawings or Gerber files); scan and validate (virus scan, file type, size, hash duplicate check); build the missing-details list and send it back; create or sync the project in CRM (RFQ id, customer, project details, promise date); link the package to the CRM record.\nIdentify and read: identify each file as BOM, drawing or Gerber; read the content, OCR for scanned PDFs.\nNormalize: map the content into the unified format, RFQ ID attached.\nReview: confirm the normalized package before the hook fires.",
+      "RFQ package: BOM, mechanical drawings, Gerber files (UI upload; API and email are the other front doors).",
+      "Starts on RFQ package upload (human receive step), then automated.",
+      "Uppy upload; ClamAV virus scan; PaddleOCR; Pydantic-validated unified format; CRM sync (CRM to be named).",
+      "CRM choice and sync spec open; exact Pydantic schema for BOM/Gerber/drawing to be finalized; ingestion stays sub-skill 1.1 unless decided otherwise; hash-dedup identity tuple and two-bucket quarantine to be specced.",
+      "Normalized RFQ package (BOM, drawings, Gerbers) keyed by RFQ ID.",
+      "Feature Extraction",
+      "Scrub BOM Input structure; Part master"
+     ],
+     "sourceRow": 2
+    },
+    {
+     "id": "wr-2",
+     "values": [
+      "SK-02",
+      "Feature Extraction",
+      "Receive and query: read the normalized drawings for this RFQ ID.\nExtract: run extraction on geometry, title block and drawing text.\nMap to the checklist: map extracted values to the Capture Checklist and flag gaps - nothing silently skipped.\nReview: check the extracted attributes.",
+      "Normalized drawings from Input Standardization.",
+      "Started by the hook from Input Standardization.",
+      "Open-source extraction (repos to be shortlisted); OCR demo - drawing feature extraction.",
+      "Capture Checklist content and location to confirm; extraction repos to be picked; skill mapping to be verified.",
+      "Mechanical attribute set per assembly, plus a gaps list.",
+      "Feasibility & Risk",
+      "Capture Checklist (Master Capture Checklists)"
+     ],
+     "sourceRow": 3
+    },
+    {
+     "id": "wr-3",
+     "values": [
+      "SK-03",
+      "Feasibility & Risk",
+      "Receive and query: read attributes, BOM lines, machine-constraint and lead-time/EOL data.\nCompare: compare design complexity with each machine constraint - can-build verdict with reason per constraint.\nFlag risks: long-lead-time and EOL parts, high-tolerance fits.\nReview: review the verdict and the risk flags together.",
+      "Attribute set per assembly; BOM lines; machine-constraint list; lead-time/EOL data.",
+      "Started by the hook from Feature Extraction.",
+      "Machine-constraint master (export open); distributor feeds or ERP history for lead time/EOL (source to be decided).",
+      "Machine constraint list export open; lead-time/EOL source open; tolerance thresholds undefined.",
+      "Feasibility verdict with reasons and risk flags, per RFQ.",
+      "Distributor & Source Selection",
+      "Part master risk fields (EOL, NRFND, LTB, lifecycle, single source)"
+     ],
+     "sourceRow": 4
+    },
+    {
+     "id": "wr-4",
+     "values": [
+      "SK-04",
+      "Distributor & Source Selection",
+      "Receive and query: read the BOM lines, risk flags and preferred-distributor lists.\nScan: scan the preferred-distributor lists and online sources - reliable sources only.\nSelect: select the most reliable suppliers per part or commodity, reliability-scored.\nReview: review the supplier selection.",
+      "BOM lines; risk flags; preferred-distributor lists.",
+      "Started by the hook from Feasibility & Risk.",
+      "Mouser / Digi-Key / Accuris / FindChips APIs; supplier reliability scoring (to be defined).",
+      "Reliability score definition open (lead-time reliability plus quote history); preferred-distributor lists to be located or uploaded.",
+      "Selected suppliers per part or commodity.",
+      "Supplier RFQ/Quoting Tools",
+      "Supplier master; Commodity Mapping"
+     ],
+     "sourceRow": 5
+    },
+    {
+     "id": "wr-5",
+     "values": [
+      "SK-05",
+      "Supplier RFQ/Quoting Tools",
+      "Receive and query: read the selected suppliers and the parts to quote.\nPrepare: prepare the sub-component RFQs per supplier - one pack per supplier.\nSend and track: send the RFQs and track the replies.\nCollect and review: review the responses brought into one place.",
+      "Selected suppliers; parts to quote.",
+      "Started by the hook from Distributor & Source Selection. Human approval before RFQs go to outside vendors (per batch or standing rule - open).",
+      "Email; QuoteWin.",
+      "Approval mode open; skill mapping to be verified.",
+      "Supplier quotes against each RFQ line.",
+      "SAP/API Cost Extraction",
+      "RFQ master; Supplier master"
+     ],
+     "sourceRow": 6
+    },
+    {
+     "id": "wr-6",
+     "values": [
+      "SK-06",
+      "SAP/API Cost Extraction",
+      "Receive and query: read the parts and processes that need an internal cost.\nPull: pull current inventory pricing and historical labor rates.\nBaseline: build the internal cost baseline per part and process.\nReview: review the baseline.",
+      "Parts and processes to cost; ERP/SAP pricing.",
+      "Started by the hook from Supplier RFQ/Quoting Tools.",
+      "ERP/SAP APIs.",
+      "CAM scope for this skill and the no-ERP client fallback to be confirmed.",
+      "Internal cost baseline per part and process.",
+      "Quote Validation & Comparison",
+      "Part master cost fields; Inventory master (needed)"
+     ],
+     "sourceRow": 7
+    },
+    {
+     "id": "wr-7",
+     "values": [
+      "SK-07",
+      "Quote Validation & Comparison",
+      "Receive and query: read the vendor quotes and the internal baseline.\nValidate: validate each quote and run the price checks - rejects auto-quarantined.\nCompare: line up the validated bids and build the matrix - most cost-effective path marked.\nReview: review the matrix and clear the quarantined rejects.",
+      "Vendor quotes; internal cost baseline.",
+      "Started by the hook from SAP/API Cost Extraction.",
+      "Commodity-wise cost prediction rules.",
+      "Price-validation rule set to be written; matrix selection weighting undefined (price only, or lead time and risk too); single review control to be confirmed.",
+      "Validated quote set and price comparison matrix per RFQ.",
+      "Costed BOM",
+      "RFQ master; 17 Commodities Cost Prediction Rules"
+     ],
+     "sourceRow": 8
+    },
+    {
+     "id": "wr-8",
+     "values": [
+      "SK-08",
+      "Costed BOM",
+      "Receive and query: read chosen prices, baseline, BOM, risk flags, feasibility verdict.\nConsolidate: build the multi-level costed BOM - material, labor, overhead, 100% auditable price points.\nPush to BullMind: push the costed BOM data for reporting.\nReview: check the costed BOM.",
+      "Chosen prices; cost baseline; BOM; risk flags; feasibility verdict.",
+      "Started by the hook from Quote Validation & Comparison.",
+      "CBOM build in DuckDB; multilevel BOM build-vs-buy logic (parent-child via Assembly / CPN / Quantity; FG de-duplication).",
+      "BullMind push interface to be specced; audit trail format for price points undefined; 25 of 33 edge-case variables unconfirmed (Harish review).",
+      "Costed BOM per RFQ, with the data in BullMind.",
+      "Reporting via BullMind",
+      "Multilevel BOM Logic CAM; Sales Quote master"
+     ],
+     "sourceRow": 9
+    },
+    {
+     "id": "wr-9",
+     "values": [
+      "SK-09",
+      "Reporting via BullMind",
+      "Receive and query: read the costed BOM and earlier-stage data.\nExcel reports: generate the 16 CAM reports as one Excel workbook, tabs in fixed order R01..R16 - a failing tab blocks output, never silently skipped.\nDashboards and Q&A: serve Superset dashboards and answer questions via DBHub.\nReview: review the reports before they are used.",
+      "Costed BOM; earlier-stage data.",
+      "Started by the hook from Costed BOM; one tool run produces the whole workbook.",
+      "openpyxl workbook writer driven by one ISATVON manifest; FastMCP tool cam_report_generate; Pydantic; Jinja2; Superset; DBHub.",
+      "33 edge-case variables: 8 run from confirmed defaults, 25 guarded (unconfirmed variables stop the run and name themselves); reporting inputs and dashboard set to be confirmed.",
+      "The 16-tab report workbook and dashboard links per RFQ.",
+      "Sales Quote",
+      "CAM RFQ Single FastMCP Tool (16-tab workbook); CAMind Sample Questions (500)"
+     ],
+     "sourceRow": 10
+    },
+    {
+     "id": "wr-10",
+     "values": [
+      "SK-10",
+      "Sales Quote",
+      "Receive and query: read the costed BOM and the report data.\nBuild the quote: add FAI, NRE, assembly charges, taxes and buffers - commercial formatting, internal approvals.\nCompose: draft the quote email - cover letter in the editor, costing as Excel attachment.\nApprove and send: human approval; the quote email goes to the client.",
+      "Costed BOM; report data.",
+      "Started by the hook from Reporting via BullMind; the final send is a human step.",
+      "Email editor; Excel attachment.",
+      "Internal approval chain and buffer/margin rules undefined.",
+      "Quote email to the client, sent after human approval.",
+      "End of workflow",
+      "Sales Quote master"
+     ],
+     "sourceRow": 11
+    }
+   ],
+   "readOnly": false
+  },
+  {
+   "name": "Tools",
+   "headers": [
+    "Tooling ID",
+    "Tool Name",
+    "Category",
+    "Links / Path",
+    "Owner / access",
+    "Status",
+    "Source version / checked_at",
+    "Refresh Frequency",
+    "Record type",
+    "Source tab",
+    "BuLLM badge",
+    "License"
+   ],
+   "descriptions": [
+    "Stable tool/category ID",
+    "Examples only; not configured integrations",
+    "Add-on category specified by user",
+    "Confirmed URL / repo / document path; a placeholder path otherwise",
+    "Named owner/permissions",
+    "Record and deployment status",
+    "Registry version/date; tool version and freshness noted",
+    "Source refresh cadence to confirm",
+    "Agent, Assistant, MCP server, OSS repo, Skill, API, Framework or Enterprise system",
+    "Leaderboard, Repo Library, Skill Library or Tech Stack",
+    "BuLLM Recommended, BuLLM Tested, Gap or High fit",
+    "Open-source license as the SPDX short ID (e.g. MIT, Apache-2.0); Proprietary for commercial tools, Proprietary (internal) for company-built tools"
+   ],
+   "rows": [
+    {
+     "id": "wr-1",
+     "values": [
+      "CAM-TF-01",
+      "CAMerge",
+      "CBOM reports",
+      "",
+      "Ultiweb / Centum",
+      "In progress - 13 CBOM output report tabs; Excel output achieved",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Proprietary (internal)"
+     ],
+     "sourceRow": 2
+    },
+    {
+     "id": "wr-2",
+     "values": [
+      "CAM-TF-02",
+      "CAMind",
+      "Embedded analytics",
+      "",
+      "DBAI",
+      "Implemented partially (Metabase-based); chat via SQL suggested",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Proprietary (internal)"
+     ],
+     "sourceRow": 3
+    },
+    {
+     "id": "wr-3",
+     "values": [
+      "CAM-TF-03",
+      "Metabase",
+      "Analytics",
+      "github.com/metabase/metabase",
+      "DBAI",
+      "Proposed licensing cannot generate interactive charts - tables and static charts only",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "AGPL-3.0"
+     ],
+     "sourceRow": 4
+    },
+    {
+     "id": "wr-4",
+     "values": [
+      "CAM-TF-04",
+      "Hex.tech",
+      "Analytics / SQL chat",
+      "hex.tech",
+      "DBAI",
+      "Shortlisted for testing; not in CAM currently; exports spreadsheets from SQL queries",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Proprietary"
+     ],
+     "sourceRow": 5
+    },
+    {
+     "id": "wr-5",
+     "values": [
+      "CAM-TF-05",
+      "FastMCP",
+      "Tool layer (cam_report_generate)",
+      "github.com/jlowin/fastmcp",
+      "DBAI",
+      "In use - reporting pipeline",
+      "",
+      "",
+      "Framework",
+      "Tech Stack",
+      "",
+      "Apache-2.0"
+     ],
+     "sourceRow": 6
+    },
+    {
+     "id": "wr-6",
+     "values": [
+      "CAM-TF-06",
+      "openpyxl",
+      "Excel workbook writer (16-tab reports)",
+      "openpyxl docs / PyPI",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "MIT"
+     ],
+     "sourceRow": 7
+    },
+    {
+     "id": "wr-7",
+     "values": [
+      "CAM-TF-07",
+      "Pydantic",
+      "Contracts and validation (normalized RFQ format)",
+      "github.com/pydantic/pydantic",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "MIT"
+     ],
+     "sourceRow": 8
+    },
+    {
+     "id": "wr-8",
+     "values": [
+      "CAM-TF-08",
+      "Jinja2",
+      "Template step in the manifest chain",
+      "github.com/pallets/jinja",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "BSD-3-Clause"
+     ],
+     "sourceRow": 9
+    },
+    {
+     "id": "wr-9",
+     "values": [
+      "CAM-TF-09",
+      "Dify",
+      "Workflow pipeline control (/api/dify/start/{rfq_id})",
+      "github.com/langgenius/dify",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Dify open-source license"
+     ],
+     "sourceRow": 10
+    },
+    {
+     "id": "wr-10",
+     "values": [
+      "CAM-TF-10",
+      "Apache Superset",
+      "Reports and analytics dashboards",
+      "github.com/apache/superset",
+      "DBAI",
+      "Planned - dashboard view of RFQ/report data",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "Apache-2.0"
+     ],
+     "sourceRow": 11
+    },
+    {
+     "id": "wr-11",
+     "values": [
+      "CAM-TF-11",
+      "DBHub",
+      "Q&A on RFQ/report data",
+      "",
+      "DBAI (Akshay)",
+      "Planned - document to be shared and folded into Skill 9",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Proprietary (internal)"
+     ],
+     "sourceRow": 12
+    },
+    {
+     "id": "wr-12",
+     "values": [
+      "CAM-TF-12",
+      "BullMind",
+      "Costed BOM data store for reporting",
+      "",
+      "DBAI",
+      "Planned - push interface to be specced",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Proprietary (internal)"
+     ],
+     "sourceRow": 13
+    },
+    {
+     "id": "wr-13",
+     "values": [
+      "CAM-TF-13",
+      "scrub_mcp_server.py",
+      "SCRUB BOM standardization (BOM, settings, batch -> input_db)",
+      "",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "MCP server",
+      "Tech Stack",
+      "",
+      "Proprietary (internal)"
+     ],
+     "sourceRow": 14
+    },
+    {
+     "id": "wr-14",
+     "values": [
+      "CAM-TF-14",
+      "reporting_mcp_server.py",
+      "CBOM build, ERP/costing enrichment, 16 report tables",
+      "",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "MCP server",
+      "Tech Stack",
+      "",
+      "Proprietary (internal)"
+     ],
+     "sourceRow": 15
+    },
+    {
+     "id": "wr-15",
+     "values": [
+      "CAM-TF-15",
+      "upload_server.py",
+      "File intake (BOM, QuoteWin, Costing Sheet)",
+      "",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "API",
+      "Tech Stack",
+      "",
+      "Proprietary (internal)"
+     ],
+     "sourceRow": 16
+    },
+    {
+     "id": "wr-16",
+     "values": [
+      "CAM-TF-16",
+      "ClamAV",
+      "Virus scan at intake",
+      "github.com/Cisco-Talos/clamav",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "GPL-2.0-only"
+     ],
+     "sourceRow": 17
+    },
+    {
+     "id": "wr-17",
+     "values": [
+      "CAM-TF-17",
+      "PaddleOCR",
+      "OCR for scanned PDFs",
+      "github.com/PaddlePaddle/PaddleOCR",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "Apache-2.0"
+     ],
+     "sourceRow": 18
+    },
+    {
+     "id": "wr-18",
+     "values": [
+      "CAM-TF-18",
+      "DuckDB",
+      "input_db / cbom / reports stores",
+      "github.com/duckdb/duckdb",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "MIT"
+     ],
+     "sourceRow": 19
+    },
+    {
+     "id": "wr-19",
+     "values": [
+      "CAM-TF-19",
+      "PostgreSQL",
+      "Project tracking; HITL conflict records",
+      "postgresql.org",
+      "DBAI",
+      "In use",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "PostgreSQL"
+     ],
+     "sourceRow": 20
+    },
+    {
+     "id": "wr-20",
+     "values": [
+      "CAM-TF-20",
+      "InforLN ERP",
+      "Centum ERP: pricing, inventory, supplier, PO data",
+      "",
+      "Centum IT",
+      "Source system (approx. 43,000 MPNs; data to 18 Dec 2024)",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Proprietary"
+     ],
+     "sourceRow": 21
+    },
+    {
+     "id": "wr-21",
+     "values": [
+      "CAM-TF-21",
+      "QuoteWin",
+      "Quote awards export; supplier quotes",
+      "",
+      "Centum",
+      "Source system (AWARDS_PART_NUMBER_LISTING_*_FLOAT_* exports)",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Proprietary"
+     ],
+     "sourceRow": 22
+    },
+    {
+     "id": "wr-22",
+     "values": [
+      "CAM-TF-22",
+      "SFDC",
+      "Customer and project IDs",
+      "",
+      "Centum",
+      "Named in the data model; CRM choice still open",
+      "",
+      "",
+      "Enterprise system",
+      "Tech Stack",
+      "",
+      "Proprietary"
+     ],
+     "sourceRow": 23
+    },
+    {
+     "id": "wr-23",
+     "values": [
+      "CAM-TF-23",
+      "Mouser API",
+      "Component data / sourcing",
+      "developer.mouser.com",
+      "DBAI",
+      "Option 1 in the component API parameters",
+      "",
+      "",
+      "API",
+      "Repo Library",
+      "",
+      "Proprietary"
+     ],
+     "sourceRow": 24
+    },
+    {
+     "id": "wr-24",
+     "values": [
+      "CAM-TF-24",
+      "Accuris",
+      "Component data (lifecycle, compliance)",
+      "",
+      "DBAI",
+      "Option 2 in the component API parameters",
+      "",
+      "",
+      "API",
+      "Repo Library",
+      "",
+      "Proprietary"
+     ],
+     "sourceRow": 25
+    },
+    {
+     "id": "wr-25",
+     "values": [
+      "CAM-TF-25",
+      "Digi-Key API",
+      "Component data / sourcing",
+      "developer.digikey.com",
+      "DBAI",
+      "Option 3 in the component API parameters",
+      "",
+      "",
+      "API",
+      "Repo Library",
+      "",
+      "Proprietary"
+     ],
+     "sourceRow": 26
+    },
+    {
+     "id": "wr-26",
+     "values": [
+      "CAM-TF-26",
+      "FindChips",
+      "Component data / sourcing",
+      "",
+      "DBAI",
+      "Mapped in the commodity taxonomy",
+      "",
+      "",
+      "API",
+      "Repo Library",
+      "",
+      "Proprietary"
+     ],
+     "sourceRow": 27
+    },
+    {
+     "id": "wr-27",
+     "values": [
+      "CAM-TF-27",
+      "Uppy",
+      "Upload UI (BOM, drawings, Gerbers)",
+      "github.com/transloadit/uppy",
+      "DBAI",
+      "In use (RFQ app)",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "MIT"
+     ],
+     "sourceRow": 28
+    },
+    {
+     "id": "wr-28",
+     "values": [
+      "CAM-TF-28",
+      "Cognee + Pydantic AI",
+      "Intake processing (BuLLM 1.0 mapping)",
+      "github.com/topoteretes/cognee",
+      "DBAI",
+      "Mapped for intake processing",
+      "",
+      "",
+      "OSS repo",
+      "Tech Stack",
+      "",
+      "Apache-2.0"
+     ],
+     "sourceRow": 29
+    },
+    {
+     "id": "wr-29",
+     "values": [
+      "CAM-TF-29",
+      "PHP Laravel",
+      "CAM web stack (CAMerge)",
+      "github.com/laravel/laravel",
+      "Ultiweb",
+      "In progress (CAMerge development)",
+      "",
+      "",
+      "Framework",
+      "Tech Stack",
+      "",
+      "MIT"
+     ],
+     "sourceRow": 30
+    },
+    {
+     "id": "wr-30",
+     "values": [
+      "CAM-TF-30",
+      "cam_report_generate",
+      "Single tool producing the 16-tab report workbook",
+      "",
+      "DBAI",
+      "Draft for review (FastMCP tool; guards fire on unconfirmed variables)",
+      "",
+      "",
+      "Agent",
+      "Skill Library",
+      "",
+      "Proprietary (internal)"
+     ],
+     "sourceRow": 31
+    }
+   ],
+   "readOnly": false
+  },
+  {
+   "name": "Rules",
+   "headers": [
+    "Rule ID",
+    "Rule / Type / Description",
+    "Source / approval / evidence",
+    "Org / Skills mapping + enforcement / gate",
+    "Stop / review condition",
+    "Owner / version",
+    "Status",
+    "Effective / expiry",
+    "Skill ref"
+   ],
+   "descriptions": [
+    "Stable rule key; one rule per row.",
+    "Name, type and short definition. Types: Policy, Prompt, Estimation, Calculation, Validation, Decision/routing.",
+    "Source/version, approval and evidence reference; preserve source context.",
+    "Org IDs + Skill IDs are joins to the live tabs. Mapping marked proposed is not approved applicability. State inputs, runtime point and required check together.",
+    "What happens on failure, missing data or conflict.",
+    "Accountable owner + rule version; confirmed before activation.",
+    "Proposed is not approved or implemented. Test cases are not executed tests.",
+    "Start / expiry / review date; dates are required before activation.",
+    "Skill reference"
+   ],
+   "rows": [],
+   "readOnly": false
+  }
+ ]
+}
