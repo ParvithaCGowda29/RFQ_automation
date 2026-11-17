@@ -297,7 +297,6 @@ html[data-ge-landing] .mid .composer { visibility:hidden; }
 .demo-chip.as-btn:hover { border-color:var(--blue); color:var(--blue); }
 .login-state { position:absolute; top:14px; left:16px; z-index:6; }
 .ge-state { position:absolute; top:14px; left:16px; z-index:6; }
-.goal-entry { position:relative; }
 .abtn.stop { background:#FEF3F2; color:#B42318; border:1px solid #FDA29B; }
 .abtn.stop:hover { background:#FEE4E2; }
 .dark .abtn.stop, [data-theme="dark"] .abtn.stop { background:rgba(217,45,32,.18); color:#F97066; border-color:rgba(240,68,56,.5); }

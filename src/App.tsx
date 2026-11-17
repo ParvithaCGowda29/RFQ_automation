@@ -8,7 +8,7 @@ import {
   IconHistory, IconEye, IconX,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
-import { GoalEntry, GoalDraft, GOAL_PREFIX } from "./GoalEntry";
+import { GoalDraft, GOAL_PREFIX } from "./GoalEntry";
 import { LoginPage } from "./LoginPage";
 import camLogoBlack from "./assets/cam-bom-automation-black.png";
 import camLogoWhite from "./assets/cam-bom-automation-white.png";
@@ -378,11 +378,9 @@ export default function App() {
         </div>
       </header>
 
-      {goalText === null && !skipGoalEntry && <GoalEntry onSend={sendGoal} />}
-
       <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "") +
         // BAM pane progression: 1 middle only, 2 goal expanded (files pane opens), 3 files added (output pane opens).
-        (skipGoalEntry || goalText !== null ? (skipGoalEntry || files.length > 0 || skill ? "" : " ge-two") : " ge-solo")}>
+        (files.length > 0 || skill ? "" : " ge-two")}>
         {/* LEFT RAIL - workflow (BAM_UI look) */}
         <section className={"pane rail" + (railMini ? " mini" : "")}>
           <div className="rail-h">
