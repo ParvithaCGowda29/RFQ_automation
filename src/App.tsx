@@ -467,7 +467,6 @@ export default function App() {
                 <input ref={zipPick} type="file" accept=".zip,application/zip" hidden onChange={e => { addPicked(e.target.files); e.target.value = ""; }} />
               </div>
             </div>
-            <div className="af-s">BOM, mechanical drawings, Gerber files - click Add files for upload options</div>
 
             {FEAT.progressBar && (
               <>
