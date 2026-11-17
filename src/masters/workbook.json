@@ -79,6 +79,31 @@
    "readOnly": false
   },
   {
+   "name": "Agents",
+   "headers": [
+    "Agent ID",
+    "Agent Name",
+    "Kind",
+    "Type",
+    "Reference",
+    "Source",
+    "Tools",
+    "Model"
+   ],
+   "descriptions": [
+    "Stable agent or assistant ID",
+    "Agent or assistant name and what it does",
+    "Agent: one defined job. Assistant: a cross-cutting helper across masters.",
+    "Proposed agent (to be built) / Internal agent (already in the company) / Third-party or external agent",
+    "Proposed agents only: the existing agent this one enhances or integrates. Assistants: what they cut across.",
+    "Built in BuLLM, or Imported from another path (GitHub, MCP server, company path). The Imported tag shows on row hover.",
+    "Tools the agent or assistant uses, pulled from the Tool Factory",
+    "Model the agent or assistant runs on"
+   ],
+   "rows": [],
+   "readOnly": false
+  },
+  {
    "name": "Skills",
    "headers": [
     "Skill ID",
