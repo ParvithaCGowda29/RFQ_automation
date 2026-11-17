@@ -380,7 +380,7 @@ export default function App() {
         {/* LEFT RAIL - workflow (BAM_UI look) */}
         <section className={"pane rail" + (railMini ? " mini" : "")}>
           <div className="rail-h">
-            {!railMini && <h2>Workflow - 10 skills</h2>}
+            {!railMini && <h2>Agent - RFQ Automation</h2>}
             <button className="iconbtn sm" onClick={() => setRailMini(!railMini)} aria-expanded={!railMini}
               aria-label={railMini ? "Expand navigation" : "Collapse navigation"} title={railMini ? "Expand navigation" : "Collapse navigation"}>
               {railMini ? <IconLayoutSidebarLeftExpand size={14} /> : <IconLayoutSidebarLeftCollapse size={14} />}
