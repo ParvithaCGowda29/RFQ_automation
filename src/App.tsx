@@ -359,7 +359,7 @@ export default function App() {
       <header className="top">
         <img className="wm-logo" src={theme === "light" ? camLogoBlack : camLogoWhite} alt="CAM BOM Automation" />
         <div className="top-right">
-          <button className="demo-chip as-btn" onClick={() => setAgentsOpen(true)}><IconEye size={13} /> Agents - view only</button>
+          <button className="demo-chip as-btn" onClick={() => setAgentsOpen(true)}><IconEye size={13} /> Agent - view only</button>
           <button className="demo-chip as-btn" onClick={() => { setRunsOpen(true); setOpenRunId(null); }}><IconHistory size={13} /> Runs</button>
           <span className="demo-chip">Demo - mock data, no backend</span>
           <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
@@ -681,31 +681,30 @@ export default function App() {
       </div>
       {agentsOpen && (
         <div className="modal-veil" onClick={() => setAgentsOpen(false)}>
-          <div className="modal" role="dialog" aria-label="Agents" onClick={e => e.stopPropagation()}>
+          <div className="modal" role="dialog" aria-label="Agent" onClick={e => e.stopPropagation()}>
             <div className="modal-h">
-              <h3>Agents on this RFQ</h3>
+              <h3>The agent on this screen</h3>
               <span className="demo-chip">Demo</span>
-              <button className="iconbtn sm" onClick={() => setAgentsOpen(false)} aria-label="Close agents"><IconX size={14} /></button>
+              <button className="iconbtn sm" onClick={() => setAgentsOpen(false)} aria-label="Close agent view"><IconX size={14} /></button>
             </div>
-            <p className="modal-sub">Every automated agent is read-only: it reads RFQ data and drafts output, but it cannot change data. Its work only moves on when you approve it.</p>
-            {skills.map(s => (
-              <div className="mrow" key={s.n}>
-                <span className="mi"><img src={bullHead} alt="" /></span>
-                <div className="mt">
-                  <div className="mn">{s.n}. {s.name}</div>
-                  <div className="ms">{s.subs.length} sub-skills - reads RFQ data, drafts output</div>
-                </div>
-                <span className="chip vo"><IconEye size={13} /> View only</span>
-              </div>
-            ))}
-            <div className="mrow">
-              <span className="mi"><IconMessage size={16} /></span>
+            <div className="mrow hero">
+              <span className="mi"><img src={bullHead} alt="" /></span>
               <div className="mt">
-                <div className="mn">BuLLM assistant</div>
-                <div className="ms">Answers questions about the run - mock replies, no backend</div>
+                <div className="mn">RFQ automation agent</div>
+                <div className="ms">The one agent here - it runs the 10-stage workflow below</div>
               </div>
               <span className="chip vo"><IconEye size={13} /> View only</span>
             </div>
+            <p className="modal-sub">It reads RFQ data and drafts output, but it cannot change data. Its work only moves on when you approve it at a human step.</p>
+            <div className="stage-label">Its workflow stages</div>
+            {skills.map(s => (
+              <div className="mrow stage" key={s.n}>
+                <div className="mt">
+                  <div className="mn">{s.n}. {s.name}</div>
+                  <div className="ms">{s.subs.length} sub-skills</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
