@@ -291,3 +291,54 @@ html[data-ge-landing] .mid .composer { visibility:hidden; }
 .main.ge-two .rail, .main:not(.ge-solo):not(.ge-two) .right { animation:gePaneIn .35s ease; }
 @keyframes gePaneIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 @media (prefers-reduced-motion: reduce) { .main.ge-two .rail, .main:not(.ge-solo):not(.ge-two) .right { animation:none; } }
+
+/* 17 Nov 2026 build: view-only agents, stop control, send-back with note, run history, screen labels */
+.demo-chip.as-btn { cursor:pointer; font:inherit; }
+.demo-chip.as-btn:hover { border-color:var(--blue); color:var(--blue); }
+.login-state { position:absolute; top:14px; left:16px; z-index:6; }
+.ge-state { position:absolute; top:14px; left:16px; z-index:6; }
+.goal-entry { position:relative; }
+.abtn.stop { background:#FEF3F2; color:#B42318; border:1px solid #FDA29B; }
+.abtn.stop:hover { background:#FEE4E2; }
+.dark .abtn.stop, [data-theme="dark"] .abtn.stop { background:rgba(217,45,32,.18); color:#F97066; border-color:rgba(240,68,56,.5); }
+.rbtn.reject { background:#D92D20; }
+.rbtn.reject:hover { background:#B42318; }
+.rf { flex-wrap:wrap; }
+.reject-form { flex-basis:100%; display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+.reject-note { width:100%; box-sizing:border-box; resize:vertical; font:inherit; font-size:13px; padding:8px 10px; border-radius:8px; border:1px solid var(--line-strong, var(--line)); background:var(--card); color:inherit; }
+.reject-actions { display:flex; gap:8px; justify-content:flex-end; }
+.chip.vo { display:inline-flex; align-items:center; gap:5px; color:var(--ink2); }
+.chip.st-completed { color:var(--green); }
+.chip.st-stopped { color:#B42318; }
+.chip.st-sent-back { color:#B54708; }
+.dark .chip.st-stopped, [data-theme="dark"] .chip.st-stopped { color:#F97066; }
+.dark .chip.st-sent-back, [data-theme="dark"] .chip.st-sent-back { color:#FDB022; }
+.modal-veil { position:fixed; inset:0; background:rgba(15,27,45,.45); display:flex; align-items:center; justify-content:center; z-index:60; padding:20px; }
+.modal { background:var(--card); color:inherit; border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); width:min(520px,100%); max-height:82vh; overflow:auto; padding:16px 18px; }
+.modal.wide { width:min(680px,100%); }
+.modal-h { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.modal-h h3 { margin:0; font-size:15px; }
+.modal-h .iconbtn { margin-left:auto; }
+.modal-sub { font-size:12.5px; color:var(--ink2); margin:4px 0 12px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.mrow { display:flex; align-items:center; gap:10px; padding:9px 10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:transparent; width:100%; box-sizing:border-box; text-align:left; font:inherit; color:inherit; }
+button.mrow { cursor:pointer; }
+button.mrow:hover { border-color:var(--blue); }
+.mrow .mi { width:28px; height:28px; border-radius:8px; background:var(--chip); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--ink2); }
+.mrow .mi img { width:16px; height:16px; }
+.mrow .mt { flex:1; min-width:0; }
+.mrow .mn { font-size:13.5px; font-weight:600; }
+.mrow .ms { font-size:12px; color:var(--ink2); }
+.trace-row { display:flex; gap:10px; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--line); }
+.trace-row .tk { width:88px; flex-shrink:0; color:var(--ink2); font-size:12px; text-transform:uppercase; letter-spacing:.04em; padding-top:2px; }
+.trace-skill { margin-top:12px; }
+.trace-skill.dim { opacity:.45; }
+.ts-h { display:flex; align-items:center; gap:6px; font-weight:600; font-size:13.5px; }
+.ts-h svg { color:var(--green); }
+.trace-skill.dim .ts-h svg { color:var(--ink2); }
+.ts-sub { margin:6px 0 8px 20px; }
+.ts-sn { font-size:12.5px; font-weight:600; color:var(--ink2); }
+.ts-step { display:flex; align-items:baseline; gap:6px; font-size:12.5px; padding:2px 0; }
+.ts-step img { width:13px; height:13px; align-self:center; }
+.ts-note { color:var(--ink2); font-size:12px; }
+.ts-out { font-size:12px; color:var(--ink2); margin:2px 0 0 19px; }
+.modal-h .rbtn { flex:none; width:auto; padding:6px 14px; font-size:12.5px; }

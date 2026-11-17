@@ -63,6 +63,7 @@ export function LoginPage({
 
   return (
     <main className="login-page">
+      <span className="demo-chip login-state">Demo</span>
       <div className="login-frame">
         <section className="login-showcase" aria-label="CAM RFQ workspace">
           <div className="login-showcase-inner">

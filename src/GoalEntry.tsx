@@ -98,6 +98,7 @@ export function GoalEntry({ onSend }: { onSend: (text: string) => void }) {
   };
   return (
     <div className={"goal-entry" + (exit ? " ge-exit" : "")}>
+      <span className="demo-chip ge-state">Demo</span>
       <h3 className="ge-head">Name the agent and let the <img src={bull} alt="BuLL" className="ge-bull" /> build it</h3>
       <p className="ge-lede">Type the goal. BuLL does the rest.</p>
       <div className="ge-card" ref={boxRef}>

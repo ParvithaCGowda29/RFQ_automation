@@ -5,6 +5,7 @@ import {
   IconFolder, IconGauge, IconInbox, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand,
   IconLink, IconMail, IconMessage, IconMicrophone, IconMoon, IconPencil, IconPlugConnected, IconPlus,
   IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop, IconLogout,
+  IconHistory, IconEye, IconX,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
 import { GoalEntry, GoalDraft, GOAL_PREFIX } from "./GoalEntry";
@@ -17,10 +18,12 @@ import Uppy from "@uppy/core";
 import { CoverLetterEditor } from "./editor";
 import { BomGrid } from "./bomgrid";
 import { SKILLS, OUTPUTS, type OutCard, type Skill } from "./data";
+import { loadRuns, saveRun, statusLabel, type RunStatus } from "./runs";
 
 /* Provisional designs pending her wireframe sign-off: set either flag to false
-   to revert that piece to the approved base look. */
-const FEAT = { progressBar: false, reviewPanel: false };
+   to revert that piece to the approved base look. Review panel switched on
+   17 Nov 2026 - she asked for the approval gates to be wired in. */
+const FEAT = { progressBar: false, reviewPanel: true };
 const SUPPORTED_UPLOAD_TYPES = [".xlsx", ".xls", ".csv", ".pdf", ".zip", ".gbr", ".ger", ".gtl", ".gbl", ".txt", ".dxf"];
 const MAX_UPLOAD_FILES = 20;
 
@@ -226,6 +229,12 @@ export default function App() {
     setPhase(d === "running" || d === "bom" ? "running" : d === "final" ? "done" : "review");
   }, []);
   const [draft, setDraft] = useState("");
+  const [runStart, setRunStart] = useState<{ t: number; files: string[] } | null>(null);
+  const [runsOpen, setRunsOpen] = useState(false);
+  const [agentsOpen, setAgentsOpen] = useState(false);
+  const [openRunId, setOpenRunId] = useState<string | null>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectNote, setRejectNote] = useState("");
   const dic = useDictate();
   const listening = dic.phase === "listening" || dic.phase === "requesting";
   const elapsed = dic.startedAt ? `${Math.floor((Date.now() - dic.startedAt) / 60000)}:${String(Math.floor((Date.now() - dic.startedAt) / 1000) % 60).padStart(2, "0")}` : "0:00";
@@ -287,12 +296,47 @@ export default function App() {
   }, [phase, subIdx, skillIdx]);
 
   const startRun = () => {
+    setRunStart({ t: Date.now(), files: files.map(f => f.name) });
+    setRejectOpen(false); setRejectNote("");
     setSkillIdx(0); setSubIdx(0); setPhase("running"); setExpanded(0);
   };
 
+  const recordRun = (status: RunStatus, note?: string) => {
+    saveRun({
+      id: String(Date.now()),
+      rfq: "RFQ-1042",
+      startedAt: runStart?.t ?? Date.now(),
+      endedAt: Date.now(),
+      status,
+      note,
+      files: runStart?.files ?? files.map(f => f.name),
+      reachedSkill: status === "stopped" ? Math.max(1, skillIdx + 1) : skills.length,
+    });
+    setRunStart(null);
+  };
+
+  const resetRun = () => { setPhase("idle"); setSkillIdx(-1); setSubIdx(0); setExpanded(null); };
+
   const approve = () => {
     if (!skill || phase !== "review" || skillIdx !== skills.length - 1) return;
+    recordRun("completed");
     setPhase("done");
+  };
+
+  const stopRun = () => {
+    if (phase !== "running") return;
+    recordRun("stopped");
+    setMsgs(m => [...m, { who: "ai", text: "Run stopped. Nothing was sent - start it again any time." }]);
+    resetRun();
+  };
+
+  const sendBack = () => {
+    if (phase !== "review") return;
+    const note = rejectNote.trim();
+    recordRun("sent-back", note || undefined);
+    setRejectOpen(false); setRejectNote("");
+    setMsgs(m => [...m, { who: "ai", text: `Sent back${note ? ` with your note: "${note}"` : ""}. The draft stays with Sales Quote for rework; start the run again when ready.` }]);
+    resetRun();
   };
 
   const sendChat = (suggestion?: string) => {
@@ -315,6 +359,8 @@ export default function App() {
       <header className="top">
         <img className="wm-logo" src={theme === "light" ? camLogoBlack : camLogoWhite} alt="CAM BOM Automation" />
         <div className="top-right">
+          <button className="demo-chip as-btn" onClick={() => setAgentsOpen(true)}><IconEye size={13} /> Agents - view only</button>
+          <button className="demo-chip as-btn" onClick={() => { setRunsOpen(true); setOpenRunId(null); }}><IconHistory size={13} /> Runs</button>
           <span className="demo-chip">Demo - mock data, no backend</span>
           <button className="iconbtn" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
             {theme === "light" ? <IconMoon size={16} /> : <IconSun size={16} />}
@@ -556,7 +602,18 @@ export default function App() {
                       {checks.map(c => <div className="rcheck" key={c}><span className="ci"><IconCheck size={14} /></span>{c}</div>)}</div>
                     <div className="rf">
                       <button className="rbtn" onClick={approve}><IconCheck size={16} /> {next ? `Approve - start ${next}` : "Approve and send quote"}</button>
-                      <button className="rbtn ghost">Send back with note</button>
+                      {!rejectOpen ? (
+                        <button className="rbtn ghost" onClick={() => setRejectOpen(true)}><IconX size={16} /> Send back with note</button>
+                      ) : (
+                        <div className="reject-form">
+                          <textarea className="reject-note" rows={2} placeholder="Note for the rework - what should change" value={rejectNote}
+                            onChange={e => setRejectNote(e.target.value)} aria-label="Note for the rework" />
+                          <div className="reject-actions">
+                            <button className="rbtn ghost" onClick={() => { setRejectOpen(false); setRejectNote(""); }}>Cancel</button>
+                            <button className="rbtn reject" onClick={sendBack}><IconX size={16} /> Send back</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -610,18 +667,108 @@ export default function App() {
                   <IconCheck size={16} /> Approve and send quote
                 </button>
               ) : (
-                <button className="abtn off">Automated - no review needed</button>
+                <button className="abtn stop" onClick={stopRun}><IconPlayerStop size={16} /> Stop run</button>
               )}
             </div>
           )}
           {skill && phase !== "done" && FEAT.reviewPanel && phase !== "review" && (
             <div className="actionbar">
               <div className="hk"><IconPlugConnected size={13} /> {skill.hook}</div>
-              <button className="abtn off">Review panel opens at the human step</button>
+              <button className="abtn stop" onClick={stopRun}><IconPlayerStop size={16} /> Stop run</button>
             </div>
           )}
         </section>
       </div>
+      {agentsOpen && (
+        <div className="modal-veil" onClick={() => setAgentsOpen(false)}>
+          <div className="modal" role="dialog" aria-label="Agents" onClick={e => e.stopPropagation()}>
+            <div className="modal-h">
+              <h3>Agents on this RFQ</h3>
+              <span className="demo-chip">Demo</span>
+              <button className="iconbtn sm" onClick={() => setAgentsOpen(false)} aria-label="Close agents"><IconX size={14} /></button>
+            </div>
+            <p className="modal-sub">Every automated agent is read-only: it reads RFQ data and drafts output, but it cannot change data. Its work only moves on when you approve it.</p>
+            {skills.map(s => (
+              <div className="mrow" key={s.n}>
+                <span className="mi"><img src={bullHead} alt="" /></span>
+                <div className="mt">
+                  <div className="mn">{s.n}. {s.name}</div>
+                  <div className="ms">{s.subs.length} sub-skills - reads RFQ data, drafts output</div>
+                </div>
+                <span className="chip vo"><IconEye size={13} /> View only</span>
+              </div>
+            ))}
+            <div className="mrow">
+              <span className="mi"><IconMessage size={16} /></span>
+              <div className="mt">
+                <div className="mn">BuLLM assistant</div>
+                <div className="ms">Answers questions about the run - mock replies, no backend</div>
+              </div>
+              <span className="chip vo"><IconEye size={13} /> View only</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {runsOpen && (() => {
+        const runs = loadRuns();
+        const openRun = runs.find(r => r.id === openRunId) || null;
+        return (
+        <div className="modal-veil" onClick={() => setRunsOpen(false)}>
+          <div className="modal wide" role="dialog" aria-label="Run history" onClick={e => e.stopPropagation()}>
+            <div className="modal-h">
+              <h3>{openRun ? "Run trace" : "Run history"}</h3>
+              <span className="demo-chip">Demo</span>
+              {openRun && <button className="rbtn ghost" onClick={() => setOpenRunId(null)}>All runs</button>}
+              <button className="iconbtn sm" onClick={() => setRunsOpen(false)} aria-label="Close run history"><IconX size={14} /></button>
+            </div>
+            {!openRun ? (
+              runs.length === 0 ? (
+                <p className="modal-sub">No runs yet. Start a run and it will be recorded here.</p>
+              ) : runs.map(r => (
+                <button className="mrow" key={r.id} onClick={() => setOpenRunId(r.id)}>
+                  <span className="mi"><IconHistory size={16} /></span>
+                  <div className="mt">
+                    <div className="mn">{r.rfq} - {new Date(r.startedAt).toLocaleString()}</div>
+                    <div className="ms">{Math.max(1, Math.round((r.endedAt - r.startedAt) / 1000))}s - {r.files.length} input file(s){r.note ? ` - note: ${r.note}` : ""}</div>
+                  </div>
+                  <span className={"chip st-" + r.status}>{statusLabel(r.status)}</span>
+                </button>
+              ))
+            ) : (
+              <div className="trace">
+                <p className="modal-sub"><IconEye size={13} /> View only - what the agents read, decided and did in this run.</p>
+                <div className="trace-row"><span className="tk">Outcome</span><span className={"chip st-" + openRun.status}>{statusLabel(openRun.status)}</span></div>
+                {openRun.note && <div className="trace-row"><span className="tk">Your note</span><span>{openRun.note}</span></div>}
+                <div className="trace-row"><span className="tk">Read</span><span>{openRun.files.length ? openRun.files.join(", ") : "No input files recorded"}</span></div>
+                {skills.map((s, i) => {
+                  const reached = i < openRun.reachedSkill;
+                  return (
+                    <div className={"trace-skill" + (reached ? "" : " dim")} key={s.n}>
+                      <div className="ts-h">{reached ? <IconCircleCheckFilled size={14} /> : <IconX size={14} />} {s.name}{!reached && " - not reached"}</div>
+                      {reached && s.subs.map(sub => (
+                        <div className="ts-sub" key={sub.id}>
+                          <div className="ts-sn">{sub.id} {sub.name}</div>
+                          {sub.steps.map(st => (
+                            <div className="ts-step" key={st.name}>
+                              {st.mode === "human" ? <IconUser size={13} /> : <img src={bullHead} alt="" />}
+                              <span>{st.name}</span>
+                              <span className="ts-note">{st.note}</span>
+                            </div>
+                          ))}
+                          {(OUTPUTS[sub.id] || []).map((c: OutCard) => (
+                            <div className="ts-out" key={c.title}>Output: {c.title}{c.rows ? " - " + c.rows.map(x => `${x.k}: ${x.v}`).join(", ") : ""}</div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }
