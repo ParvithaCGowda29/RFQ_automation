@@ -666,6 +666,7 @@ export default function App() {
                 return (
                   <InputStandardisationReview key={sub.id}
                     hookLine="Hook will pass: Normalized RFQ package (standardised scrub BOM, with the awards and costing sheets held as references) keyed by RFQ ID"
+                    dark={theme === "dark"}
                     onApprove={approve} />
                 );
               }
