@@ -367,12 +367,11 @@ button.mrow:hover { border-color:var(--blue); }
 .isr-banner.warn svg { color:var(--iw); }
 .isr-banner.info { background:var(--bluesoft); border-left:3px solid var(--blue); }
 .isr-banner.info svg { color:var(--blue); }
-/* AG Grid review table (Skill 1 scrub BOM) */
+/* AG Grid review table (Skill 1 scrub BOM) - Excel style: compact rows, cell gridlines, pinned row-number column */
 .isr-ag { flex:1; min-height:0; margin-bottom:8px; }
-.isr-ag .ag-row.isr-band-row { background:var(--ag-header-background-color); }
-.isr-ag .isr-band-lbl { font-weight:600; font-size:11.5px; }
-.isr-ag .isr-band-lbl.d1 { font-weight:500; opacity:.82; padding-left:16px; }
-.isr-ag .ag-cell .mono, .isr-ag .ag-cell span.mono { font-family:'JetBrains Mono',ui-monospace,monospace; font-size:11px; }
+.isr-ag .ag-cell { border-right:1px solid var(--ag-row-border-color); }
+.isr-ag .ag-header-cell { border-right:1px solid var(--ag-header-border-color, var(--ag-row-border-color)); }
+.isr-ag .ag-cell.isr-rownum, .isr-ag .ag-header-cell.isr-rownum { background:var(--ag-header-background-color); color:var(--ag-secondary-foreground-color); font-size:10px; justify-content:center; text-align:center; }
 .isr-flag { color:var(--iw); font-size:10px; }
 .isr-chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; }
 .isr-chip.miss { color:var(--iw); background:var(--iw-soft); }
