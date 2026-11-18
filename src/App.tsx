@@ -538,7 +538,9 @@ export default function App() {
                     <div className="subs">
                       {s.subs.map((sub, j) => {
                         const ss = i === skillIdx ? subStatus(j) : i < doneCount ? "done" : "wait";
-                        const isHuman = (s.n === 1 && j === 0) || (s.n === 10 && j === s.subs.length - 1);
+                        // Human gate: every skill's last sub-skill is the human review (doc: all 10 End lines),
+                        // plus skill 1's upload step. Everything else is automated (BAM bull glyph).
+                        const isHuman = j === s.subs.length - 1 || (s.n === 1 && j === 0);
                         return (
                           <div key={sub.id} className={"sub-row" + (ss === "done" ? " done" : ss === "run" || ss === "review" ? " act" : "")}>
                             <span className="sd" />{sub.name}

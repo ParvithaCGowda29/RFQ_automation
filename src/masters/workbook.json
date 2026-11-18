@@ -157,7 +157,7 @@
       "Open-source extraction (repos to be shortlisted); OCR demo - drawing feature extraction.",
       "Capture Checklist content and location to confirm; extraction repos to be picked; skill mapping to be verified.",
       "Mechanical attribute set per assembly, plus a gaps list.",
-      "Feasibility & Risk",
+      "Distributor & Source Selection",
       "Capture Checklist (Master Capture Checklists)"
      ],
      "sourceRow": 3
@@ -166,15 +166,15 @@
      "id": "wr-3",
      "values": [
       "SK-03",
-      "Feasibility & Risk",
-      "Receive and query: read attributes, BOM lines, machine-constraint and lead-time/EOL data.\nCompare: compare design complexity with each machine constraint - can-build verdict with reason per constraint.\nFlag risks: long-lead-time and EOL parts, high-tolerance fits.\nReview: review the verdict and the risk flags together.",
-      "Attribute set per assembly; BOM lines; machine-constraint list; lead-time/EOL data.",
-      "Started by the hook from Feature Extraction.",
-      "Machine-constraint master (export open); distributor feeds or ERP history for lead time/EOL (source to be decided).",
-      "Machine constraint list export open; lead-time/EOL source open; tolerance thresholds undefined.",
-      "Feasibility verdict with reasons and risk flags, per RFQ.",
       "Distributor & Source Selection",
-      "Part master risk fields (EOL, NRFND, LTB, lifecycle, single source)"
+      "Receive and query: read the BOM lines, risk flags and preferred-distributor lists.\nScan: scan the preferred-distributor lists and online sources - reliable sources only.\nSelect: select the most reliable suppliers per part or commodity, reliability-scored.\nReview: review the supplier selection.",
+      "BOM lines; risk flags; preferred-distributor lists.",
+      "Started by the hook from Feature Extraction.",
+      "Mouser / Digi-Key / Accuris / FindChips APIs; supplier reliability scoring (to be defined).",
+      "Reliability score definition open (lead-time reliability plus quote history); preferred-distributor lists to be located or uploaded.",
+      "Selected suppliers per part or commodity.",
+      "Supplier RFQ/Quoting Tools",
+      "Supplier master; Commodity Mapping"
      ],
      "sourceRow": 4
     },
@@ -182,22 +182,6 @@
      "id": "wr-4",
      "values": [
       "SK-04",
-      "Distributor & Source Selection",
-      "Receive and query: read the BOM lines, risk flags and preferred-distributor lists.\nScan: scan the preferred-distributor lists and online sources - reliable sources only.\nSelect: select the most reliable suppliers per part or commodity, reliability-scored.\nReview: review the supplier selection.",
-      "BOM lines; risk flags; preferred-distributor lists.",
-      "Started by the hook from Feasibility & Risk.",
-      "Mouser / Digi-Key / Accuris / FindChips APIs; supplier reliability scoring (to be defined).",
-      "Reliability score definition open (lead-time reliability plus quote history); preferred-distributor lists to be located or uploaded.",
-      "Selected suppliers per part or commodity.",
-      "Supplier RFQ/Quoting Tools",
-      "Supplier master; Commodity Mapping"
-     ],
-     "sourceRow": 5
-    },
-    {
-     "id": "wr-5",
-     "values": [
-      "SK-05",
       "Supplier RFQ/Quoting Tools",
       "Receive and query: read the selected suppliers and the parts to quote.\nPrepare: prepare the sub-component RFQs per supplier - one pack per supplier.\nSend and track: send the RFQs and track the replies.\nCollect and review: review the responses brought into one place.",
       "Selected suppliers; parts to quote.",
@@ -205,8 +189,24 @@
       "Email; QuoteWin.",
       "Approval mode open; skill mapping to be verified.",
       "Supplier quotes against each RFQ line.",
-      "SAP/API Cost Extraction",
+      "Feasibility & Risk",
       "RFQ master; Supplier master"
+     ],
+     "sourceRow": 5
+    },
+    {
+     "id": "wr-5",
+     "values": [
+      "SK-05",
+      "Feasibility & Risk",
+      "Receive and query: read attributes, BOM lines, machine-constraint and lead-time/EOL data.\nCompare: compare design complexity with each machine constraint - can-build verdict with reason per constraint.\nFlag risks: long-lead-time and EOL parts, high-tolerance fits.\nReview: review the verdict and the risk flags together.",
+      "Attribute set per assembly; BOM lines; machine-constraint list; lead-time/EOL data.",
+      "Started by the hook from Supplier RFQ/Quoting Tools.",
+      "Machine-constraint master (export open); distributor feeds or ERP history for lead time/EOL (source to be decided).",
+      "Machine constraint list export open; lead-time/EOL source open; tolerance thresholds undefined.",
+      "Feasibility verdict with reasons and risk flags, per RFQ.",
+      "SAP/API Cost Extraction",
+      "Part master risk fields (EOL, NRFND, LTB, lifecycle, single source)"
      ],
      "sourceRow": 6
     },
@@ -217,7 +217,7 @@
       "SAP/API Cost Extraction",
       "Receive and query: read the parts and processes that need an internal cost.\nPull: pull current inventory pricing and historical labor rates.\nBaseline: build the internal cost baseline per part and process.\nReview: review the baseline.",
       "Parts and processes to cost; ERP/SAP pricing.",
-      "Started by the hook from Supplier RFQ/Quoting Tools.",
+      "Started by the hook from Feasibility & Risk.",
       "ERP/SAP APIs.",
       "CAM scope for this skill and the no-ERP client fallback to be confirmed.",
       "Internal cost baseline per part and process.",

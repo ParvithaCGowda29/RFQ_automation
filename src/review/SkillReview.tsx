@@ -141,12 +141,12 @@ function SupplierData({ dark }: { dark: boolean }) {
       <BomGrid dark={dark} plain widths={[82, 104, 146, 56, 72]}
         columns={["Commodity", "Part", "Selected supplier", "Score", "Source"]}
         rows={[
-          ["Connectors", "40-pin header", "Molex (via Mouser)", "96/100", "Preferred"],
-          ["MCU", "STM32F407", "STMicro (Digi-Key)", "94/100", "Preferred"],
-          ["PMIC", "TPS65217", "Texas Instruments", "93/100", "Preferred"],
-          ["Passives", "Resistor 10k 0402", "Yageo (via Mouser)", "92/100", "Online"],
-          ["PCB fab", "4-layer ENIG", "PCBWay", "90/100", "Online"],
-          ["Cable/hardware", "M3x8 bolt", "Fastenal", "88/100", "Online"],
+          ["Connectors", "40-pin header", "Mouser", "96/100", "Preferred"],
+          ["MCU", "STM32F407", "Digi-Key", "94/100", "Preferred"],
+          ["PMIC", "TPS65217", "Digi-Key", "93/100", "Preferred"],
+          ["Passives", "Resistor 10k 0402", "Avnet", "92/100", "Online"],
+          ["PCB fab", "4-layer ENIG", "Avnet", "90/100", "Online"],
+          ["Cable/hardware", "M3x8 bolt", "Mouser", "88/100", "Online"],
           ["Enclosure", "ESD cover", "Enclosure vendor A", "84/100", "Preferred"],
           ["Packaging", "Pallet + master", "Enclosure vendor B", "82/100", "Preferred"],
         ]} />
