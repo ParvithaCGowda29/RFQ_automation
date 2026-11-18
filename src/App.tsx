@@ -4,10 +4,21 @@ import {
   IconClipboardCheck, IconDatabase, IconFiles, IconFileSpreadsheet, IconFileZip,
   IconFolder, IconGauge, IconInbox, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand,
   IconLink, IconMail, IconMessage, IconMicrophone, IconMoon, IconPencil, IconPlugConnected, IconPlus,
-  IconScan, IconSend, IconSun, IconTable, IconTruck, IconUser, IconCircleCheckFilled, IconPlayerStop, IconLogout,
+  IconScan, IconSend, IconSun, IconTable, IconTruck, IconCircleCheckFilled, IconPlayerStop, IconLogout,
   IconHistory, IconEye, IconX,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
+
+// Human-gate icon, copied from BAM_UI's HitlChip (src/components/ui.tsx HumanIcon):
+// the Lucide person-outline SVG. Automated steps use the BuLLM bull glyph (bull-head.png),
+// the same asset BAM_UI's AutoChip renders - shown full-colour, without a tint filter.
+function HumanGateIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
 import { GoalDraft, GOAL_PREFIX } from "./GoalEntry";
 import { LoginPage } from "./LoginPage";
 import camLogoBlack from "./assets/cam-bom-automation-black.png";
@@ -17,7 +28,8 @@ import { dictationSupported, startDictation, stopDictation, useDictate } from ".
 import Uppy from "@uppy/core";
 import { CoverLetterEditor } from "./editor";
 import { BomGrid } from "./bomgrid";
-import { SKILLS, OUTPUTS, HOOK_LINE, type OutCard, type Skill } from "./data";
+import { SKILLS, OUTPUTS, HOOK_LINE, REVIEW_LINE, type OutCard, type Skill } from "./data";
+import { ReviewShell, SkillReviewBody } from "./review/SkillReview";
 import { InputStandardisationReview } from "./review/InputStandardisationReview";
 import { MastersApp } from "./masters/MastersApp";
 import { loadRuns, saveRun, statusLabel, type RunStatus } from "./runs";
@@ -158,7 +170,7 @@ const REVIEW1_CHAT: Msg[] = [
 ];
 
 const REVIEW_CHECKS: Record<number, string[]> = {
-  3: ["Verdict: can build - 0402 parts, 8 oven zones",
+  5: ["Verdict: can build - 0402 parts, 8 oven zones",
       "Risk flags seen: 2 EOL parts (U4, U9), 1 long-lead-time (J2, 14 weeks)",
       "2 input gaps from the drawing noted for the quote"],
   10: ["Quote built from the costed BOM for RFQ-1042",
@@ -321,23 +333,18 @@ export default function App() {
     setAuthenticated(false);
   };
 
-  // Only the initial Start action and final quote approval are human-gated.
+  // Every skill ends at the human Action button (CAM 4.0 document, section 3: "the
+  // trigger for each stage is human"; every skill's End line: "the human Action button;
+  // the hook then passes..."). Sub-skills run automatically; nothing moves to the next
+  // skill until a person approves the skill's review in the Output pane.
   useEffect(() => {
     if (phase !== "running" || !skill) return;
     const t = setTimeout(() => {
       if (subIdx < skill.subs.length - 1) {
         setSubIdx(subIdx + 1);
-      } else if (skill.n === 1) {
-        // Skill 1 gate: the Input standardisation review (approved wireframe)
-        // must be approved before the hook passes the package to Skill 2.
-        setPhase("review");
-        setMsgs(m => [...m, ...REVIEW1_CHAT]);
-      } else if (skillIdx < skills.length - 1) {
-        setSkillIdx(skillIdx + 1);
-        setSubIdx(0);
-        setExpanded(skillIdx + 1);
       } else {
         setPhase("review");
+        setMsgs(m => [...m, ...(skill.n === 1 ? REVIEW1_CHAT : [{ who: "ai" as const, text: REVIEW_LINE[skill.n] ?? `${skill.name} finished - the review is open in the Output pane.` }])]);
       }
     }, 500);
     return () => clearTimeout(t);
@@ -367,13 +374,12 @@ export default function App() {
 
   const approve = () => {
     if (!skill || phase !== "review") return;
-    if (skill.n === 1) {
-      // Skill 1 approved: the hook fires and the run continues with Feature Extraction.
+    if (skillIdx < skills.length - 1) {
+      // Skill approved: the hook fires and the run continues with the next skill.
       setMsgs(m => [...m, { who: "ai", text: HOOK_LINE(skill.name, skills[skillIdx + 1].name) }]);
       setSkillIdx(skillIdx + 1); setSubIdx(0); setExpanded(skillIdx + 1); setPhase("running");
       return;
     }
-    if (skillIdx !== skills.length - 1) return;
     recordRun("completed");
     setPhase("done");
   };
@@ -536,7 +542,7 @@ export default function App() {
                         return (
                           <div key={sub.id} className={"sub-row" + (ss === "done" ? " done" : ss === "run" || ss === "review" ? " act" : "")}>
                             <span className="sd" />{sub.name}
-                            <span className="mode">{ss === "done" && <span className="done-tick"><IconCircleCheckFilled size={14} /></span>}<span className="mode-icon">{isHuman ? <IconUser size={14} /> : <img className="bull" src={bullHead} alt="Automated" />}</span></span>
+                            <span className="mode">{ss === "done" && <span className="done-tick"><IconCircleCheckFilled size={14} /></span>}<span className="mode-icon">{isHuman ? <HumanGateIcon size={14} /> : <img className="bull" src={bullHead} alt="Automated" />}</span></span>
                           </div>
                         );
                       })}
@@ -670,12 +676,25 @@ export default function App() {
                     onApprove={approve} />
                 );
               }
+              if (FEAT.reviewPanel && phase === "review" && skill.n >= 2 && skill.n <= 9) {
+                // Skills 2-9 review: the right pane is that skill's output (her 18 Nov 2026
+                // list) plus the human Action button; earlier sub-skill progress stays in the rail.
+                if (j !== skill.subs.length - 1) return null;
+                return (
+                  <ReviewShell key={sub.id}
+                    hookLine={skill.hook.replace("Hook passes:", "Hook will pass:")}
+                    nextSkillNo={skill.n + 1}
+                    onApprove={approve}>
+                    <SkillReviewBody skillNo={skill.n} dark={theme === "dark"} />
+                  </ReviewShell>
+                );
+              }
               if (FEAT.reviewPanel && phase === "review" && j === skill.subs.length - 1) {
                 const checks = REVIEW_CHECKS[skill.n] || [`${skill.name} output ready`, skill.hook.replace("Hook passes:", "Hook will pass:")];
                 const next = skillIdx < skills.length - 1 ? skills[skillIdx + 1].name : null;
                 return (
                   <div className="rcard" key={sub.id}>
-                    <div className="rh"><div className="ri"><IconUser size={18} /></div>
+                    <div className="rh"><div className="ri"><HumanGateIcon size={18} /></div>
                       <div><h3>Ready for your review</h3><div className="rs">Nothing moves on until you approve</div></div></div>
                     <div className="rb"><div className="rl">What you are confirming</div>
                       {checks.map(c => <div className="rcheck" key={c}><span className="ci"><IconCheck size={14} /></span>{c}</div>)}</div>
@@ -705,7 +724,7 @@ export default function App() {
                     const st = ss === "done" ? "done" : ss === "review" ? (k === sub.steps.length - 1 ? "review" : "done") : k === 0 ? "run" : "wait";
                     return (
                       <div key={stp.name} className={"step" + (st === "done" ? " done" : st === "run" ? " run" : "")}>
-                        <div className="si">{stp.mode === "human" ? <IconUser size={16} /> : <img className="bull" src={bullHead} alt="Automated" />}</div>
+                        <div className="si">{stp.mode === "human" ? <HumanGateIcon size={16} /> : <img className="bull" src={bullHead} alt="Automated" />}</div>
                         <div className="st-t"><div className="st-n">{stp.name}</div><div className="st-m">{stp.note}</div></div>
                         {st === "done" ? <span className="done-tick"><IconCircleCheckFilled size={20} /></span> : <span className={"chip " + st}>{chips[st]}</span>}
                       </div>
@@ -828,7 +847,7 @@ export default function App() {
                           <div className="ts-sn">{sub.id} {sub.name}</div>
                           {sub.steps.map(st => (
                             <div className="ts-step" key={st.name}>
-                              {st.mode === "human" ? <IconUser size={13} /> : <img src={bullHead} alt="" />}
+                              {st.mode === "human" ? <HumanGateIcon size={13} /> : <img src={bullHead} alt="" />}
                               <span>{st.name}</span>
                               <span className="ts-note">{st.note}</span>
                             </div>

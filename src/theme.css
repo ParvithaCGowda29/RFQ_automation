@@ -109,7 +109,8 @@ button { font:inherit; color:inherit; }
 .mode-icon { display:inline-grid; place-items:center; width:30px; height:30px; flex:none; border-radius:50%; background:var(--soft); color:var(--blue); }
 .mode-icon .bull { width:22px; height:22px; }
 .sub-row.act .mode-icon { background:#FFFFFF; color:var(--blue); }
-.bull { width:18px; height:18px; object-fit:contain; display:block; filter:grayscale(1) brightness(0) saturate(100%) invert(39%) sepia(95%) saturate(1517%) hue-rotate(164deg) brightness(91%) contrast(101%); }
+/* BuLLM bull glyph, shown full-colour exactly as BAM_UI's AutoChip renders it (no tint filter). */
+.bull { width:18px; height:18px; object-fit:contain; display:block; }
 .hooknote { display:flex; gap:6px; align-items:flex-start; font-size:12px; color:var(--ink2); background:var(--soft2); border:1px solid var(--line); border-radius:8px; padding:6px 8px; margin:4px 0 8px 22px; }
 .legend { padding:10px 16px; border-top:1px solid var(--line); display:flex; gap:14px; font-size:12px; color:var(--ink2); flex-shrink:0; }
 .legend span { display:flex; align-items:center; gap:5px; }
@@ -403,3 +404,26 @@ button.mrow:hover { border-color:var(--blue); }
 .bam-btn:focus-visible { outline:2.5px solid #2F6BEB; outline-offset:3px; }
 .bam-btn[aria-disabled] { cursor:not-allowed; }
 .bam-ico { display:inline-grid; place-items:center; width:20px; height:20px; flex:none; }
+
+/* ---- Skills 2-9 review outputs (18 Nov 2026): right-pane review screens per skill ---- */
+.srv-body { overflow-y:auto; gap:8px; }
+.srv-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink2); margin:2px 2px 6px; }
+.srv-search { display:flex; align-items:center; gap:8px; border:1px solid var(--line-strong); border-radius:10px; background:var(--soft2); padding:0 12px; min-height:40px; color:var(--ink2); margin-bottom:8px; }
+.srv-search input { flex:1; border:0; background:none; outline:none; font:inherit; font-size:14px; color:var(--ink); }
+.srv-search input::placeholder { color:var(--faint); }
+.srv-list { display:flex; flex-direction:column; gap:4px; }
+.srv-trow { display:flex; align-items:center; gap:10px; min-height:38px; padding:4px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); font-size:13px; color:var(--ink); text-align:left; }
+button.srv-trow { cursor:pointer; }
+button.srv-trow:hover { border-color:var(--blue); }
+.srv-trow.sel { border-color:var(--blue); background:var(--bluefill); }
+.srv-trow .n { font-weight:600; flex:1; min-width:0; }
+.srv-trow .m { color:var(--ink2); font-size:12px; flex:none; }
+.srv-sel { flex:none; font-size:12px; font-weight:600; color:var(--blue); }
+.srv-trow.sel .srv-sel { color:var(--blueink); }
+.srv-dl { flex:none; display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 10px; border-radius:999px; border:1px solid var(--line-strong); background:var(--soft2); color:var(--blue); font-size:12px; font-weight:600; cursor:pointer; }
+.srv-dl:hover { border-color:var(--blue); background:var(--bluefill); }
+.srv-empty { color:var(--ink2); font-size:13px; padding:10px; }
+.srv-tiles { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:10px; }
+.srv-tile { border:1px solid var(--line); border-radius:10px; background:var(--card); padding:10px 12px; display:flex; flex-direction:column; gap:2px; }
+.srv-tile .t-n { font-size:18px; font-weight:700; color:var(--blue); }
+.srv-tile .t-l { font-size:11px; color:var(--ink2); }

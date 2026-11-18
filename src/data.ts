@@ -1,5 +1,7 @@
 // Workflow content from "CAM 4.0 RFQ automation in BAM: 10 skills, sub-skills and steps"
 // (her working note, 17/19 Oct 2026). Mode: human = a person must act; auto = automated.
+// Skill order 3-5 follows her 18 Nov 2026 instruction: Distributor & Source Selection,
+// then Supplier RFQ/Quoting Tools, then Feasibility & Risk (the document's 3/4/5 swapped).
 // Front-end mock data only - no backend is connected.
 
 export type Mode = "human" | "auto";
@@ -36,34 +38,34 @@ export const SKILLS: Skill[] = [
       { id: "2.3", name: "Map to the checklist", steps: [ A("Map extracted values to the Capture Checklist and flag gaps", "Nothing silently skipped") ] },
       { id: "2.4", name: "Review", steps: [ A("Check the extracted attributes", "Review checkpoint") ] },
     ] },
-  { n: 3, name: "Feasibility & Risk", icon: "gauge",
-    hook: "Hook passes: Feasibility verdict with reasons and risk flags, per RFQ",
-    subs: [
-      { id: "3.1", name: "Receive and query", steps: [ A("Read attributes, BOM lines, machine-constraint and lead-time/EOL data", "Started by the hook from Feature Extraction") ] },
-      { id: "3.2", name: "Compare", steps: [ A("Compare design complexity with each machine constraint", "Can-build verdict with reason per constraint") ] },
-      { id: "3.3", name: "Flag risks", steps: [ A("Flag long-lead-time and EOL parts, high-tolerance fits", "Risk flags per RFQ") ] },
-      { id: "3.4", name: "Review", steps: [ A("Review the feasibility verdict and the risk flags together", "Review checkpoint") ] },
-    ] },
-  { n: 4, name: "Distributor & Source Selection", icon: "truck",
+  { n: 3, name: "Distributor & Source Selection", icon: "truck",
     hook: "Hook passes: Selected suppliers per part or commodity",
     subs: [
-      { id: "4.1", name: "Receive and query", steps: [ A("Read the BOM lines, risk flags and preferred-distributor lists", "Started by the hook from Feasibility & Risk") ] },
-      { id: "4.2", name: "Scan", steps: [ A("Scan the preferred-distributor lists and online sources", "Reliable sources only") ] },
-      { id: "4.3", name: "Select", steps: [ A("Select the most reliable suppliers per part or commodity", "Reliability-scored") ] },
-      { id: "4.4", name: "Review", steps: [ A("Review the supplier selection", "Review checkpoint") ] },
+      { id: "3.1", name: "Receive and query", steps: [ A("Read the BOM lines, attributes and preferred-distributor lists", "Started by the hook from Feature Extraction") ] },
+      { id: "3.2", name: "Scan", steps: [ A("Scan the preferred-distributor lists and online sources", "Reliable sources only") ] },
+      { id: "3.3", name: "Select", steps: [ A("Select the most reliable suppliers per part or commodity", "Reliability-scored") ] },
+      { id: "3.4", name: "Review", steps: [ A("Review the supplier selection", "Review checkpoint") ] },
     ] },
-  { n: 5, name: "Supplier RFQ/Quoting Tools", icon: "send",
+  { n: 4, name: "Supplier RFQ/Quoting Tools", icon: "send",
     hook: "Hook passes: Supplier quotes against each RFQ line",
     subs: [
-      { id: "5.1", name: "Receive and query", steps: [ A("Read the selected suppliers and the parts to quote", "Started by the hook from Distributor & Source Selection") ] },
-      { id: "5.2", name: "Prepare", steps: [ A("Prepare the sub-component RFQs per supplier", "One pack per supplier") ] },
-      { id: "5.3", name: "Send and track", steps: [ A("Send the RFQs and track the replies", "Email and QuoteWin") ] },
-      { id: "5.4", name: "Collect and review", steps: [ A("Review the responses brought into one place", "Review checkpoint") ] },
+      { id: "4.1", name: "Receive and query", steps: [ A("Read the selected suppliers and the parts to quote", "Started by the hook from Distributor & Source Selection") ] },
+      { id: "4.2", name: "Prepare", steps: [ A("Prepare the sub-component RFQs per supplier", "One pack per supplier") ] },
+      { id: "4.3", name: "Send and track", steps: [ A("Send the RFQs and track the replies", "Email and QuoteWin") ] },
+      { id: "4.4", name: "Collect and review", steps: [ A("Review the responses brought into one place", "Review checkpoint") ] },
+    ] },
+  { n: 5, name: "Feasibility & Risk", icon: "gauge",
+    hook: "Hook passes: Feasibility verdict with reasons and risk flags, per RFQ",
+    subs: [
+      { id: "5.1", name: "Receive and query", steps: [ A("Read attributes, BOM lines, machine-constraint and lead-time/EOL data", "Started by the hook from Supplier RFQ/Quoting Tools") ] },
+      { id: "5.2", name: "Compare", steps: [ A("Compare design complexity with each machine constraint", "Can-build verdict with reason per constraint") ] },
+      { id: "5.3", name: "Flag risks", steps: [ A("Flag long-lead-time and EOL parts, high-tolerance fits", "Risk flags per RFQ") ] },
+      { id: "5.4", name: "Review", steps: [ A("Review the feasibility verdict and the risk flags together", "Review checkpoint") ] },
     ] },
   { n: 6, name: "SAP/API Cost Extraction", icon: "database",
     hook: "Hook passes: Internal cost baseline per part and process",
     subs: [
-      { id: "6.1", name: "Receive and query", steps: [ A("Read the parts and processes that need an internal cost", "Started by the hook from Supplier RFQ/Quoting Tools") ] },
+      { id: "6.1", name: "Receive and query", steps: [ A("Read the parts and processes that need an internal cost", "Started by the hook from Feasibility & Risk") ] },
       { id: "6.2", name: "Pull", steps: [ A("Pull current inventory pricing and historical labor rates", "ERP/SAP") ] },
       { id: "6.3", name: "Baseline", steps: [ A("Build the internal cost baseline", "Per part and process") ] },
       { id: "6.4", name: "Review", steps: [ A("Review the baseline", "Review checkpoint") ] },
@@ -112,11 +114,11 @@ export const OUTPUTS: Record<string, OutCard[]> = {
   "1.2": [ { title: "Read so far", icon: "sheet", rows: [
       { k: "BOM lines read", v: "238" }, { k: "Drawing pages", v: "4" },
       { k: "Gerber layers", v: "6" }, { k: "Gaps flagged", v: "2", tone: "blue" } ] } ],
-  "3.4": [ { title: "Feasibility verdict", icon: "gauge", rows: [
+  "5.4": [ { title: "Feasibility verdict", icon: "gauge", rows: [
       { k: "Min component size (0402)", v: "Can build", tone: "blue" },
       { k: "Oven zones (8 needed)", v: "Can build", tone: "blue" } ],
       risks: ["2 EOL parts", "1 long-lead-time"] } ],
-  "5.3": [ { title: "Supplier replies", icon: "send", rows: [
+  "4.3": [ { title: "Supplier replies", icon: "send", rows: [
       { k: "Mouser Electronics", v: "Replied", tone: "blue" }, { k: "Digi-Key", v: "Replied", tone: "blue" },
       { k: "Avnet", v: "Replied", tone: "blue" }, { k: "Enclosure vendor A", v: "Pending" },
       { k: "Enclosure vendor B", v: "Pending" } ] } ],
@@ -149,9 +151,9 @@ export const CHAT_START: [string, string][] = [
 export const REVIEW_LINE: Record<number, string> = {
   1: "Input Standardization is ready to start. Use the Start button after file ingestion.",
   2: "Feature Extraction completed automatically - the attribute set and gaps list are ready.",
-  3: "Feasibility check completed automatically. The RFQ is buildable; 2 EOL parts (U4, U9) and J2 (14-week lead time) are flagged.",
-  4: "Supplier selection completed automatically - 5 suppliers picked from the preferred lists.",
-  5: "3 of 5 suppliers replied - Mouser, Digi-Key and Avnet. The two enclosure vendors are pending.",
+  3: "Supplier selection completed automatically - 5 suppliers picked from the preferred lists.",
+  4: "3 of 5 suppliers replied - Mouser, Digi-Key and Avnet. The two enclosure vendors are pending.",
+  5: "Feasibility check completed automatically. The RFQ is buildable; 2 EOL parts (U4, U9) and J2 (14-week lead time) are flagged.",
   6: "The internal cost baseline completed automatically.",
   7: "The comparison matrix completed automatically; rejected quotes were quarantined.",
   8: "The costed BOM was built and pushed to BullMind.",
