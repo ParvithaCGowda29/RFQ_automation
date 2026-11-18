@@ -665,7 +665,7 @@ export default function App() {
                 if (j !== skill.subs.length - 1) return null;
                 return (
                   <InputStandardisationReview key={sub.id}
-                    hookLine={skill.hook}
+                    hookLine="Hook will pass: Normalized RFQ package (standardised scrub BOM, with the awards and costing sheets held as references) keyed by RFQ ID"
                     onApprove={approve}
                     onRequestChanges={(note) => sendBack(note)} />
                 );
