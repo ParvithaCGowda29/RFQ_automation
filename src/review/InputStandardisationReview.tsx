@@ -12,7 +12,7 @@ import {
   AllCommunityModule, ModuleRegistry, themeQuartz, colorSchemeLight, colorSchemeDark,
   type ColDef, type ICellRendererParams,
 } from "ag-grid-community";
-import { IconAlertTriangle, IconCheck, IconPlugConnected } from "@tabler/icons-react";
+import { IconAlertTriangle, IconFileCheck, IconPlugConnected } from "@tabler/icons-react";
 import { SCRUB_ROWS, type ScrubRow } from "./scrubBomData";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -74,7 +74,6 @@ export function InputStandardisationReview({
 
   const stockMissing = rows.reduce((n, r) => n + (String(r.stock).trim() === "" ? 1 : 0), 0);
   const allResolved = stockMissing === 0;
-  const blockReason = `Approve stays unavailable until Inventory Stock is filled in on every row — ${stockMissing} row${stockMissing === 1 ? "" : "s"} still blank. Edit the cells inline; 0 is a valid value. Blanks are never auto-filled.`;
 
   const theme = useMemo(() => themeQuartz.withPart(dark ? colorSchemeDark : colorSchemeLight).withParams({
     fontFamily: "Calibri, 'Segoe UI', Inter, sans-serif",
@@ -138,23 +137,17 @@ export function InputStandardisationReview({
 
       </div>
 
-      {/* fixed action bar */}
+      {/* fixed action bar - Approve styled exactly as the BAM_UI action button
+          (orange-glass pill family). Demo build: approval passes even with
+          missing values; blanks stay blank, nothing is fabricated. */}
       <div className="isr-bar">
-        <div className={"isr-bar-msg" + (allResolved ? " ok" : "")}>
-          {allResolved
-            ? <><IconPlugConnected size={14} /><span>{hookLine}</span></>
-            : <><IconAlertTriangle size={14} /><span>{blockReason}</span></>}
+        <div className="isr-bar-msg ok">
+          <IconPlugConnected size={14} /><span>{hookLine}</span>
         </div>
-        <div className="isr-bar-actions">
-          <div className="isr-approve-wrap">
-            <button className={"abtn isr-approve" + (allResolved ? "" : " off")} disabled={!allResolved}
-              title={allResolved ? undefined : "Fill in Inventory Stock first"}
-              onClick={() => allResolved && onApprove()}>
-              <IconCheck size={16} /> Approve → Skill 2
-            </button>
-            {!allResolved && <div className="isr-approve-why">fill in Inventory Stock first</div>}
-          </div>
-        </div>
+        <button className="bam-btn isr-approve" onClick={onApprove}>
+          <span className="bam-ico" aria-hidden><IconFileCheck size={16} /></span>
+          <span>Approve → Skill 2</span>
+        </button>
       </div>
     </div>
   );

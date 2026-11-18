@@ -375,14 +375,31 @@ button.mrow:hover { border-color:var(--blue); }
 .isr-flag { color:var(--iw); font-size:10px; }
 .isr-chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; }
 .isr-chip.miss { color:var(--iw); background:var(--iw-soft); }
-.isr-bar { border-top:1px solid var(--line); background:var(--soft2); padding:8px 14px; flex-shrink:0; }
-.isr-bar-msg { display:flex; gap:6px; align-items:center; font-size:12px; color:var(--ink2); margin-bottom:6px; }
-.isr-bar-msg svg { color:var(--iw); flex-shrink:0; }
-.isr-bar-msg.ok svg { color:var(--blue); }
-.isr-bar-actions { display:flex; gap:8px; align-items:flex-start; }
-.isr-bar-actions > .rbtn { flex:none; width:auto; height:34px; padding:0 14px; font-size:13px; }
-.isr-approve-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; min-width:0; }
-.isr-approve { width:100%; height:34px; font-size:13px; }
-.isr-approve.off { background:var(--surface3); color:var(--faint); border:1px solid var(--line); cursor:not-allowed; }
-.isr-approve.off:hover { filter:none; }
-.isr-approve-why { font-size:11px; color:var(--iw); }
+.isr-bar { border-top:1px solid var(--line); background:var(--soft2); padding:8px 14px; flex-shrink:0; display:flex; align-items:center; gap:12px; }
+.isr-bar-msg { display:flex; gap:6px; align-items:center; font-size:12px; color:var(--ink2); flex:1; min-width:0; }
+.isr-bar-msg svg { color:var(--blue); flex-shrink:0; }
+/* Action button, copied from BAM_UI's approved action-button family (bam-btn):
+   glass pill, same colours/ink, hover lift, press and focus treatment. */
+.isr { --bam-fill:#F2F9FD; --bam-fill-hi:#FFFFFF; --bam-fill-lo:#E3F1F9; --bam-fill-press:#D3E9F5; --bam-ink:#0095B6;
+  --bam-glow:0 6px 18px color-mix(in srgb, var(--bam-fill) 32%, transparent); --bam-glow-hi:0 10px 26px color-mix(in srgb, var(--bam-fill) 46%, transparent); }
+.bam-btn {
+  position:relative; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  height:40px; padding:0 18px; border-radius:999px; white-space:nowrap; cursor:pointer;
+  flex-shrink:0; min-width:max-content;
+  font-family:inherit; font-size:14px; font-weight:600; line-height:1; color:var(--bam-ink);
+  border:1px solid color-mix(in srgb, var(--bam-fill-hi) 70%, white);
+  background:linear-gradient(180deg, var(--bam-fill-hi) 0%, var(--bam-fill) 48%, var(--bam-fill-lo) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55), var(--bam-glow);
+  transition:transform .15s ease, box-shadow .15s ease, filter .15s ease, background .2s ease;
+}
+@media (hover:hover) {
+  .bam-btn:not([aria-disabled]):hover { transform:translateY(-1.5px); filter:brightness(1.05); box-shadow:inset 0 1px 0 rgba(255,255,255,.65), var(--bam-glow-hi); }
+}
+.bam-btn:not([aria-disabled]):active {
+  transform:translateY(.5px); filter:none;
+  background:linear-gradient(180deg, var(--bam-fill) 0%, var(--bam-fill-press) 100%);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.28), 0 2px 6px color-mix(in srgb, var(--bam-fill) 18%, transparent);
+}
+.bam-btn:focus-visible { outline:2.5px solid #2F6BEB; outline-offset:3px; }
+.bam-btn[aria-disabled] { cursor:not-allowed; }
+.bam-ico { display:inline-grid; place-items:center; width:20px; height:20px; flex:none; }
