@@ -891,7 +891,232 @@
     "Start / expiry / review date; dates are required before activation.",
     "Skill reference"
    ],
-   "rows": [],
+   "rows": [
+    {
+     "id": "wr-1",
+     "values": [
+      "RULE-SKILL-STRUCT",
+      "Skill structure cap · Policy; Every skill has exactly four sub-skills, never a fifth. When more room is needed, add steps inside a sub-skill. Sub-skill 1 is ingestion-type (data ingestion or a query) and opens the skill.",
+      "CAM RFQ automation doc (17 Oct 2026 draft, Srinath's guidelines); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: all RFQ skills; Enforce: at skill design time; Gate: a fifth sub-skill is never added.",
+      "A design asks for a fifth sub-skill: stop and redesign into steps.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "All RFQ skills"
+     ]
+    },
+    {
+     "id": "wr-2",
+     "values": [
+      "RULE-SKILL-HOOK",
+      "Hook and human gate · Workflow; The completion hook delivers the data and the human Action button starts the next skill. Sub-skills 2, 3 and 4 are preferably automated, with a human reviewing before the skill moves on.",
+      "CAM RFQ automation doc (confirmed Srinath, 17 Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: all RFQ skills; Enforce: at every skill boundary; Gate: no skill starts without its human Action press.",
+      "Hook fired but no human approval: hold the next skill.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "All RFQ skills"
+     ]
+    },
+    {
+     "id": "wr-3",
+     "values": [
+      "RULE-SKILL-FIRSTLAST",
+      "Human endpoints · Workflow; The first step of the first skill and the last step of the last skill are human. The rest is automated as required. The stage trigger stays human for now; it is not compulsory for the API or voice-activated workflows on the roadmap.",
+      "CAM RFQ automation doc (17 Oct 2026 draft, Srinath's guidelines); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: all RFQ skills; Enforce: at workflow endpoints; Gate: intake upload and final send stay human.",
+      "An automated first or last step is proposed: stop and review.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "All RFQ skills"
+     ]
+    },
+    {
+     "id": "wr-4",
+     "values": [
+      "RULE-POLICY-CAM-WORDING",
+      "Client-facing wording · Policy; CAM is the client-facing product name. BAM and SRI are internal names and never appear in anything the client sees.",
+      "CAM RFQ automation doc (17 Oct 2026 draft header note); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: all; Enforce: on any client-facing screen, document or email; Gate: no internal names in client material.",
+      "BAM or SRI wording in client-facing content: stop and rewrite.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "All RFQ skills"
+     ]
+    },
+    {
+     "id": "wr-5",
+     "values": [
+      "RULE-POLICY-QUOTE-SEND",
+      "Quote send approval · Policy; The client quote email (cover letter plus costing attachment) goes out only after human approval. Post-send tracking and CRM update are out of scope for now.",
+      "CAM RFQ automation doc, skill 10 (Srinath, 17 Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-10; Enforce: at quote send; Gate: human approval before any client send.",
+      "No recorded human approval: the quote stays unsent.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-10"
+     ]
+    },
+    {
+     "id": "wr-6",
+     "values": [
+      "RULE-POLICY-MOCKDATA",
+      "Mock data for certification · Policy; Pre-production test runs use synthetic RFQ packages from the shared mock library, never client data in staging. Source order: synthetic first, then public (license-checked), then client-supplied with written OK, then adapted-from-previous anonymized only.",
+      "CAM RFQ automation doc, file management proposals (17 Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: all; Enforce: before any staging or certification run; Gate: no client data in staging.",
+      "Client data found in a staging run: stop and purge.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "All RFQ skills"
+     ]
+    },
+    {
+     "id": "wr-7",
+     "values": [
+      "RULE-POLICY-INTAKE",
+      "Intake scan and dedupe · Policy; Every intake door (UI upload, email, connectors later) funnels through one pipeline. Uploads stay invisible until virus-scan accepted, and a file's identity is (tenant, case, path, content-hash), so double uploads and retries cost nothing.",
+      "CAM RFQ automation doc, file management proposals (17 Oct 2026; ClamAV in architecture, hash dedupe flagged not built); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-01; Enforce: at file intake; Gate: unscanned files stay invisible.",
+      "Scan fails or identity collides unexpectedly: stop and review.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-01"
+     ]
+    },
+    {
+     "id": "wr-8",
+     "values": [
+      "RULE-POLICY-CASE-NAMING",
+      "Case naming · Policy; A client RFQ is a case, not a project. The CRM record created at intake is the case record keyed by the RFQ ID; project is reserved for the build engagement.",
+      "CAM RFQ automation doc, file management proposals (17 Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-01; Enforce: at CRM record creation and in the masters; Gate: case and project never collide.",
+      "An RFQ recorded as a project: stop and rename.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-01"
+     ]
+    },
+    {
+     "id": "wr-9",
+     "values": [
+      "RULE-SKILL-QUARANTINE",
+      "Quote reject quarantine · Workflow; Quotes that fail schema or price checks are auto-quarantined, and the human clears them at the single review of the comparison matrix. No separate clearing step.",
+      "CAM RFQ automation doc, skill 7 merge decision (Srinath, 17 Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-07; Enforce: during quote validation; Gate: rejects never reach the comparison.",
+      "A rejected quote appears in the comparison matrix: stop and re-validate.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-07"
+     ]
+    },
+    {
+     "id": "wr-10",
+     "values": [
+      "RULE-COST-06",
+      "Build-vs-Buy L1 selection · Calculation; For each CPN at each volume, L1 price = cheaper of Direct Price (RFQ table, with volume, MOQ, SPQ, currency and excess rules) and Build Price (sum of child quantity x best child cost, recursive to leaf components). If Direct is cheaper the parent is L1 and its subparts are not; if Build is cheaper the children on the build path are L1. Quantities follow the FG rule: same FG and same Assembly-CPN pair counted once, different FGs summed.",
+      "Multilevel BOM Logic CAM doc (client confirmation requested, not yet confirmed); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-08; Enforce: during costing; Gate: no double-counting and correct L1 lineage at every BOM level.",
+      "Parent and child both marked L1, or a BOM level skipped: stop and review.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-08"
+     ]
+    },
+    {
+     "id": "wr-11",
+     "values": [
+      "RULE-COST-07",
+      "Extended cost line · Calculation; Ext = ROUND(Qty_Final x UnitPrice_Foreign x FX x (1 + Scrap%), 2). Grand total = SUM(all Ext) + NRE + Freight + Duty + Packaging + Testing (+ Taxes where applicable). Rounding policy: round at line to 2 decimals, subtotal at assembly, then grand total.",
+      "CAM Costed BOM Check Expert Feedback doc (Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-08; Enforce: during costing; Gate: versioned formula, units, currency and rounding.",
+      "Extended cost recomputes differently from the shown value by more than 0.5%: stop and review.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-08"
+     ]
+    },
+    {
+     "id": "wr-12",
+     "values": [
+      "RULE-COST-08",
+      "Award precedence · Decision/routing; When an awarded (Quotewin) line exists, use the awarded supplier's price, lead time and currency. Only when no award exists, choose the cheapest qualified supplier that meets spec, MOQ and lead time. Alternates and AML entries cost the awarded alternate, never the primary by default.",
+      "CAM Costed BOM Check Expert Feedback doc (Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-07; Enforce: during supplier price selection; Gate: awarded line always wins over cheapest.",
+      "A non-awarded supplier priced where an award exists: stop and review.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-07"
+     ]
+    },
+    {
+     "id": "wr-13",
+     "values": [
+      "RULE-COST-09",
+      "MOQ and pack size · Calculation; buy_qty = max(MOQ, CEIL(Line_Qty_Final / pack_size) x pack_size). When quotes are per pack, effective_unit_price = lot_price / pack_size. Apply the price break for the tier at or above the final line quantity.",
+      "CAM Costed BOM Check Expert Feedback doc (Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-08; Enforce: during costing; Gate: buy_qty is always a multiple of pack_size.",
+      "buy_qty not a multiple of pack size, or a lower price break used: stop and review.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-08"
+     ]
+    },
+    {
+     "id": "wr-14",
+     "values": [
+      "RULE-COST-10",
+      "Currency conversion date · Policy; Use the FX rate from the LOA or contract date as the source of truth, never today's rate. One base currency per quote; no double conversion.",
+      "CAM Costed BOM Check Expert Feedback doc (Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-08; Enforce: during costing; Gate: FX date equals the LOA date on every converted line.",
+      "FX date misaligned with the LOA date, or a line converted twice: stop and review.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-08"
+     ]
+    },
+    {
+     "id": "wr-15",
+     "values": [
+      "RULE-COST-11",
+      "Rolled quantity · Calculation; rolled_qty(child) = product of all parent qty-per x top-level build qty. Phantom assemblies follow LOA practice: explode-through and sum children to the parent level, or keep as costed subassemblies. Group duplicates by normalized MPN, manufacturer and spec, and sum rolled quantities.",
+      "CAM Costed BOM Check Expert Feedback doc (Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-08; Enforce: during BOM roll-up; Gate: quantity-per multiplied across every level, no line counted twice.",
+      "A rolled quantity mismatch at any level, or a duplicate without alternate or AML justification: stop and review.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-08"
+     ]
+    },
+    {
+     "id": "wr-16",
+     "values": [
+      "RULE-CHECKLIST-SCRUB-BOM",
+      "Scrub BOM input · Validation; The Scrub BOM workbook holds three tabs. Tab 1 SCRUB BOM: headings start at row 1, mandatory fields FG, CPN, MPN, Commodity, Quantity, Inventory Stock, none blank, names case-sensitive. Tab 2 Settings: unique FG values with V# Qty volume columns. Tab 3 Batch: unique FG values with V# Batch Qty columns.",
+      "CAM - Instructions for Creating a Scrub BOM (INPUT) doc (Oct 2026); company approval not confirmed.",
+      "Org: ORG-01 (proposed); Skills: SK-01; Enforce: at BOM intake; Gate: all mandatory fields present and non-blank.",
+      "A missing or blank mandatory field, or a heading not on row 1: stop and return the file for correction.",
+      "Owner: DigiBull; Version: draft-1",
+      "Proposed",
+      "Effective: on approval; Review: quarterly",
+      "SK-01"
+     ]
+    }
+   ],
    "readOnly": false
   }
  ]
