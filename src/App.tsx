@@ -17,7 +17,8 @@ import { dictationSupported, startDictation, stopDictation, useDictate } from ".
 import Uppy from "@uppy/core";
 import { CoverLetterEditor } from "./editor";
 import { BomGrid } from "./bomgrid";
-import { SKILLS, OUTPUTS, type OutCard, type Skill } from "./data";
+import { SKILLS, OUTPUTS, HOOK_LINE, type OutCard, type Skill } from "./data";
+import { InputStandardisationReview } from "./review/InputStandardisationReview";
 import { MastersApp } from "./masters/MastersApp";
 import { loadRuns, saveRun, statusLabel, type RunStatus } from "./runs";
 
@@ -150,6 +151,12 @@ const ICONS: Record<string, any> = {
 type Phase = "idle" | "running" | "review" | "done";
 interface Msg { who: "ai" | "me"; text: string }
 
+// Chat lines when the Skill 1 review opens (same wording as the approved wireframe).
+const REVIEW1_CHAT: Msg[] = [
+  { who: "ai", text: "All three files are read and the scrub BOM is standardised. The review is open in the Output pane." },
+  { who: "ai", text: "One thing needs you: Inventory Stock is empty on every row. Supply the values, or confirm zero, and that check clears." },
+];
+
 const REVIEW_CHECKS: Record<number, string[]> = {
   3: ["Verdict: can build - 0402 parts, 8 oven zones",
       "Risk flags seen: 2 EOL parts (U4, U9), 1 long-lead-time (J2, 14 weeks)",
@@ -163,7 +170,7 @@ export default function App() {
   const { result } = useList<Skill>({ resource: "skills" });
   const skills: Skill[] = (result?.data?.length ? result.data : SKILLS) as Skill[];
   const [theme, setTheme] = useState<"light" | "dark">(() => new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light");
-  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("cam-rfq-demo-auth") === "true");
+  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("cam-rfq-demo-auth") === "true" || new URLSearchParams(location.search).has("demo"));
   // Goal entry (approved 13 Nov 2026 wireframes): shown after login until a goal is sent. Demo/screenshot URLs
   // (?demo=, ?uploaded) skip it so those states keep working unchanged.
   const [goalText, setGoalText] = useState<string | null>(null);
@@ -237,10 +244,11 @@ export default function App() {
     }
     const d = params.get("demo");
     if (!d) return;
-    const map: Record<string, number> = { running: 4, review: 9, final: 9, bom: 7 };
+    const map: Record<string, number> = { running: 4, review: 9, final: 9, bom: 7, review1: 0 };
     const i = map[d] ?? 4;
     setSkillIdx(i); setSubIdx(d === "running" || d === "bom" ? 2 : 3); setExpanded(i);
     setPhase(d === "running" || d === "bom" ? "running" : d === "final" ? "done" : "review");
+    if (d === "review1") setMsgs(REVIEW1_CHAT);
   }, []);
   const [draft, setDraft] = useState("");
   const [uploadNote, setUploadNote] = useState("");
@@ -319,6 +327,11 @@ export default function App() {
     const t = setTimeout(() => {
       if (subIdx < skill.subs.length - 1) {
         setSubIdx(subIdx + 1);
+      } else if (skill.n === 1) {
+        // Skill 1 gate: the Input standardisation review (approved wireframe)
+        // must be approved before the hook passes the package to Skill 2.
+        setPhase("review");
+        setMsgs(m => [...m, ...REVIEW1_CHAT]);
       } else if (skillIdx < skills.length - 1) {
         setSkillIdx(skillIdx + 1);
         setSubIdx(0);
@@ -353,7 +366,14 @@ export default function App() {
   const resetRun = () => { setPhase("idle"); setSkillIdx(-1); setSubIdx(0); setExpanded(null); };
 
   const approve = () => {
-    if (!skill || phase !== "review" || skillIdx !== skills.length - 1) return;
+    if (!skill || phase !== "review") return;
+    if (skill.n === 1) {
+      // Skill 1 approved: the hook fires and the run continues with Feature Extraction.
+      setMsgs(m => [...m, { who: "ai", text: HOOK_LINE(skill.name, skills[skillIdx + 1].name) }]);
+      setSkillIdx(skillIdx + 1); setSubIdx(0); setExpanded(skillIdx + 1); setPhase("running");
+      return;
+    }
+    if (skillIdx !== skills.length - 1) return;
     recordRun("completed");
     setPhase("done");
   };
@@ -365,12 +385,15 @@ export default function App() {
     resetRun();
   };
 
-  const sendBack = () => {
+  const sendBack = (noteOverride?: string) => {
     if (phase !== "review") return;
-    const note = rejectNote.trim();
+    const note = (noteOverride ?? rejectNote).trim();
     recordRun("sent-back", note || undefined);
     setRejectOpen(false); setRejectNote("");
-    setMsgs(m => [...m, { who: "ai", text: `Sent back${note ? ` with your note: "${note}"` : ""}. The draft stays with Sales Quote for rework; start the run again when ready.` }]);
+    const rework = skill?.n === 1
+      ? "The package stays with Input Standardization for rework"
+      : "The draft stays with Sales Quote for rework";
+    setMsgs(m => [...m, { who: "ai", text: `Sent back${note ? ` with your note: "${note}"` : ""}. ${rework}; start the run again when ready.` }]);
     resetRun();
   };
 
@@ -636,6 +659,17 @@ export default function App() {
             {skill && skill.subs.map((sub, j) => {
               const ss = subStatus(j);
               if (phase === "done" && j === skill.subs.length - 1) return null;
+              if (FEAT.reviewPanel && phase === "review" && skill.n === 1) {
+                // Skill 1 review: the right pane is the review output only (approved
+                // wireframe) - earlier sub-skill progress stays visible in the left rail.
+                if (j !== skill.subs.length - 1) return null;
+                return (
+                  <InputStandardisationReview key={sub.id}
+                    hookLine={skill.hook}
+                    onApprove={approve}
+                    onRequestChanges={(note) => sendBack(note)} />
+                );
+              }
               if (FEAT.reviewPanel && phase === "review" && j === skill.subs.length - 1) {
                 const checks = REVIEW_CHECKS[skill.n] || [`${skill.name} output ready`, skill.hook.replace("Hook passes:", "Hook will pass:")];
                 const next = skillIdx < skills.length - 1 ? skills[skillIdx + 1].name : null;
@@ -655,7 +689,7 @@ export default function App() {
                             onChange={e => setRejectNote(e.target.value)} aria-label="Note for the rework" />
                           <div className="reject-actions">
                             <button className="rbtn ghost" onClick={() => { setRejectOpen(false); setRejectNote(""); }}>Cancel</button>
-                            <button className="rbtn reject" onClick={sendBack}><IconX size={16} /> Send back</button>
+                            <button className="rbtn reject" onClick={() => sendBack()}><IconX size={16} /> Send back</button>
                           </div>
                         </div>
                       )}
