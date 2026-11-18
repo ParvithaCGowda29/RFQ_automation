@@ -136,7 +136,6 @@ export function InputStandardisationReview({
           />
         </div>
 
-        <p className="isr-note"><span className="isr-flag">●</span> = case-match flag: the costing sheet matches this part only when letter case is ignored. &nbsp;<span className="isr-chip miss">missing</span> = no value in the file; edit the cell to supply one (a confirmed zero shows 0).</p>
       </div>
 
       {/* fixed action bar */}
