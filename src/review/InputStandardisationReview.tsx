@@ -6,7 +6,7 @@
 import { useState } from "react";
 import {
   IconAlertTriangle, IconCheck, IconCircleCheckFilled, IconFileSpreadsheet,
-  IconInfoCircle, IconPlugConnected, IconX,
+  IconInfoCircle, IconPlugConnected,
 } from "@tabler/icons-react";
 
 /* ---------- invented representative data (approved wireframe) ---------- */
@@ -76,11 +76,9 @@ type Tab = "scrub" | "settings" | "batch" | "awards" | "costing" | "checks";
 export function InputStandardisationReview({
   hookLine,
   onApprove,
-  onRequestChanges,
 }: {
   hookLine: string;
   onApprove: () => void;
-  onRequestChanges: (note: string) => void;
 }) {
   // ?isrtab=checks etc. opens a tab directly; ?isrresolved pre-resolves both
   // checks (screenshot/demo states).
@@ -89,8 +87,6 @@ export function InputStandardisationReview({
   const [stock, setStock] = useState<Resolution>(demoResolved ? { choice: "zero confirmed for all rows" } : null);
   const [caseMatch, setCaseMatch] = useState<Resolution>(demoResolved ? { choice: "normalise case when matching" } : null);
   const [resolving, setResolving] = useState<CheckId | null>(null);
-  const [changesOpen, setChangesOpen] = useState(false);
-  const [changesNote, setChangesNote] = useState("");
 
   const unresolved = (stock ? 0 : 1) + (caseMatch ? 0 : 1);
   const allResolved = unresolved === 0;
@@ -318,18 +314,6 @@ export function InputStandardisationReview({
             : <><IconAlertTriangle size={14} /><span>{blockReason}</span></>}
         </div>
         <div className="isr-bar-actions">
-          {!changesOpen ? (
-            <button className="rbtn ghost" onClick={() => setChangesOpen(true)}><IconX size={15} /> Request changes</button>
-          ) : (
-            <div className="isr-changes">
-              <textarea rows={2} placeholder="Note for the rework - what should change" value={changesNote}
-                onChange={e => setChangesNote(e.target.value)} aria-label="Note for the rework" />
-              <div className="isr-changes-btns">
-                <button className="rbtn ghost" onClick={() => { setChangesOpen(false); setChangesNote(""); }}>Cancel</button>
-                <button className="rbtn reject" onClick={() => onRequestChanges(changesNote)}><IconX size={15} /> Send back</button>
-              </div>
-            </div>
-          )}
           <div className="isr-approve-wrap">
             <button className={"abtn isr-approve" + (allResolved ? "" : " off")} disabled={!allResolved}
               title={allResolved ? undefined : "Resolve the flagged checks first"}
