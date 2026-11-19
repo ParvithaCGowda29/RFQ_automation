@@ -542,12 +542,6 @@ export default function App() {
     setPhase("done");
   };
 
-  const stopRun = () => {
-    if (phase !== "running") return;
-    recordRun("stopped");
-    resetRun();
-  };
-
   const sendBack = (noteOverride?: string) => {
     if (phase !== "review") return;
     const note = (noteOverride ?? rejectNote).trim();
@@ -982,19 +976,16 @@ export default function App() {
           {skill && phase !== "done" && !FEAT.reviewPanel && (
             <div className="actionbar">
               <div className="hk">{phase === "review" ? "Final approval required." : "Automated workflow - no intermediate approvals."}</div>
-              {phase === "review" ? (
+              {phase === "review" && (
                 <button className="abtn" onClick={approve}>
                   <IconCheck size={16} /> Approve and send quote
                 </button>
-              ) : (
-                <button className="abtn stop" onClick={stopRun}><IconPlayerStop size={16} /> Stop run</button>
               )}
             </div>
           )}
           {skill && phase !== "done" && FEAT.reviewPanel && phase !== "review" && (
             <div className="actionbar">
               <div className="hk"><IconPlugConnected size={13} /> {skill.hook}</div>
-              <button className="abtn stop" onClick={stopRun}><IconPlayerStop size={16} /> Stop run</button>
             </div>
           )}
         </section>
