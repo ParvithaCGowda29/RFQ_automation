@@ -6,7 +6,7 @@ import {
   IconFolder, IconGauge, IconInbox, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand,
   IconLink, IconMail, IconMessage, IconMicrophone, IconMoon, IconPencil, IconPlugConnected, IconPlus,
   IconScan, IconSend, IconSun, IconTable, IconTruck, IconCircleCheckFilled, IconPlayerStop, IconLogout,
-  IconHistory, IconEye, IconX,
+  IconHistory, IconEye, IconX, IconChevronRight, IconLayoutSidebarRightCollapse,
 } from "@tabler/icons-react";
 import bullHead from "./assets/bull-head.png";
 
@@ -68,6 +68,37 @@ const paneHeaderProps = {
 } as const;
 const canArrange = () => matchMedia("(min-width: 861px)").matches;
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* Collapsed pane (BAM_UI's exact feature, 2026-11-19, per user): a 6px hairline - no icon, no label.
+   Hovering the edge fades in a slim restore strip with a chevron; click it, or pull the hairline
+   itself, to restore the pane. The section carries data-opens so the chevron points the right way. */
+function PaneHairline({ opens, label, onRestore }: { opens: "left" | "right"; label: string; onRestore: () => void }) {
+  const pull = useRef<number | null>(null);
+  return (
+    <div
+      className="hair-body"
+      onPointerDown={e => {
+        // A press on the restore strip stays a plain click; a press on the hairline itself can pull to restore.
+        if (e.button !== 0 || (e.target as HTMLElement).closest(".hair-restore")) return;
+        pull.current = e.clientX;
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={e => {
+        const x = pull.current;
+        if (x == null) return;
+        const d = e.clientX - x;
+        if ((opens === "right" && d > 36) || (opens === "left" && d < -36)) { pull.current = null; onRestore(); }
+      }}
+      onPointerUp={() => { pull.current = null; }}
+      onPointerCancel={() => { pull.current = null; }}
+    >
+      <span className="hair-hot" aria-hidden />
+      <button type="button" className="hair-restore" onClick={onRestore} aria-expanded={false} aria-label={label} title={label}>
+        <IconChevronRight size={14} />
+      </button>
+    </div>
+  );
+}
 const SwapIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -304,6 +335,7 @@ export default function App() {
   }, [listening]);
   const [railMini, setRailMini] = useState(() => new URLSearchParams(location.search).has("mini"));
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   /* ---- Pane swapping (2026-11-19, per user request): the exact BAM_UI behaviour - drag a pane by its
      header (ghost, live reorder, settle animation), click the grip to move one place left (leftmost wraps),
      Alt+Left/Right on a focused header, order saved in this browser, one-time hint, reduced-motion respected.
@@ -327,9 +359,17 @@ export default function App() {
     try { localStorage.setItem(PANE_HINT_KEY, "done"); } catch { /* storage blocked */ }
     setHint(null);
   };
-  const collapsedPane = (p: PaneId) => (p === "rail" && railMini) || (p === "mid" && assistantCollapsed);
+  const collapsedPane = (p: PaneId) =>
+    (p === "rail" && railMini) || (p === "mid" && assistantCollapsed) || (p === "right" && rightCollapsed);
+  // BAM_UI collapsed feature (2026-11-19, per user): rail keeps its 56px icon rail; the middle and right
+  // panes fold to BAM's 6px hairline with the hover restore strip (click or pull to restore).
+  const collapsedWidth = (p: PaneId) => p === "rail" ? 56 : 6;
+  const hairOpens = (p: PaneId): "left" | "right" => {
+    const spot = paneOrder.indexOf(p);
+    return spot === 2 ? "left" : spot === 0 ? "right" : p === "rail" ? "right" : "left";
+  };
   const paneCols = paneOrder.map((id, i) =>
-    collapsedPane(id) ? "56px" : `minmax(0, ${[20, 40, 40][i]}fr)`).join(" ");
+    collapsedPane(id) ? `${collapsedWidth(id)}px` : `minmax(0, ${[20, 40, 40][i]}fr)`).join(" ");
 
   /** Neighbours glide aside in real time: FLIP-animate the panes around an order change. */
   const glide = (mutate: () => void) => {
@@ -356,12 +396,12 @@ export default function App() {
     const padL = parseFloat(cs.paddingLeft) || 12;
     const padR = parseFloat(cs.paddingRight) || 12;
     const cur = orderRef.current;
-    const collapsedPx = cur.reduce((s, q) => s + (collapsedPane(q) ? 56 : 0), 0);
+    const collapsedPx = cur.reduce((s, q) => s + (collapsedPane(q) ? collapsedWidth(q) : 0), 0);
     const total = el.clientWidth - padL - padR - 2 * gap - collapsedPx;
     const frTotal = cur.reduce((s, q, j) => s + (collapsedPane(q) ? 0 : [20, 40, 40][j]), 0);
     let x = el.getBoundingClientRect().left + padL;
     for (let i = 0; i < cur.length; i++) {
-      const w = collapsedPane(cur[i]) ? 56 : [20, 40, 40][i] / frTotal * total;
+      const w = collapsedPane(cur[i]) ? collapsedWidth(cur[i]) : [20, 40, 40][i] / frTotal * total;
       if (clientX < x + w + gap / 2) return i;
       x += w + gap;
     }
@@ -772,13 +812,9 @@ export default function App() {
         </section>
 
         {/* MIDDLE - assistant chat */}
-        <section className={"pane mid" + (assistantCollapsed ? " collapsed" : "")} style={{ order: paneOrder.indexOf("mid") }} data-layout-pane="mid">
+        <section className={"pane mid" + (assistantCollapsed ? " hair" : "")} style={{ order: paneOrder.indexOf("mid") }} data-layout-pane="mid" data-opens={assistantCollapsed ? hairOpens("mid") : undefined}>
           {assistantCollapsed ? (
-            <div className="assistant-rail-head">
-              <button className="assistant-show" onClick={() => setAssistantCollapsed(false)} aria-expanded={false} aria-label="Show assistant">
-                <IconLayoutSidebarLeftExpand size={16} /><span>Show assistant</span>
-              </button>
-            </div>
+            <PaneHairline opens={hairOpens("mid")} label="Show assistant" onRestore={() => setAssistantCollapsed(false)} />
           ) : (
           <>
           <div className="pane-h" {...paneHeaderProps}>
@@ -845,13 +881,20 @@ export default function App() {
         </section>
 
         {/* RIGHT - steps output */}
-        <section className="pane right" style={{ order: paneOrder.indexOf("right") }} data-layout-pane="right">
+        <section className={"pane right" + (rightCollapsed ? " hair" : "")} style={{ order: paneOrder.indexOf("right") }} data-layout-pane="right" data-opens={rightCollapsed ? hairOpens("right") : undefined}>
+          {rightCollapsed ? (
+            <PaneHairline opens={hairOpens("right")} label="Show output" onRestore={() => setRightCollapsed(false)} />
+          ) : (
+          <>
           <div className="pane-h" {...paneHeaderProps}>
             <button className="iconbtn sm pane-swap" onClick={() => swapPane("right")} aria-label="Swap the output pane one place left" title="Swap pane left"><SwapIcon /></button>
             <IconBolt size={16} />
             <div><h2>Output</h2>
               <div className="sub">{skill ? `${skill.name} - ${skill.subs[Math.min(subIdx, skill.subs.length - 1)].name}${phase === "review" ? " (human)" : ""}` : "No skill running yet"}</div>
             </div>
+            <button className="iconbtn sm assistant-hide" style={{ marginLeft: "auto" }} onClick={() => setRightCollapsed(true)} aria-expanded={true} aria-label="Hide output" title="Hide output">
+              <IconLayoutSidebarRightCollapse size={14} />
+            </button>
           </div>
           <div className="pane-b">
             {!skill && (
@@ -987,6 +1030,8 @@ export default function App() {
             <div className="actionbar">
               <div className="hk"><IconPlugConnected size={13} /> {skill.hook}</div>
             </div>
+          )}
+          </>
           )}
         </section>
         {hint && (
