@@ -39,9 +39,9 @@ import { loadRuns, saveRun, statusLabel, type RunStatus } from "./runs";
    to revert that piece to the approved base look. Review panel switched on
    17 Nov 2026 - she asked for the approval gates to be wired in. */
 const FEAT = { progressBar: false, reviewPanel: true };
-// Sub-skill pace (19 Nov 2026, per user): each sub-skill's outputs appear after roughly
-// 2-3 minutes of work, not instantly. 2.5 minutes sits in the middle of her range.
-const SUB_SKILL_MS = 150_000;
+// Sub-skill pace (19 Nov 2026, per user): each sub-skill's outputs appear after a short
+// delay, not instantly. First set to 2.5 min at her request, then cut to her 5-10 s range.
+const SUB_SKILL_MS = 8_000;
 
 /* ---- Pane swapping helpers (ported from BAM_UI src/lib/paneLayout.ts, 2026-11-19) ---- */
 type PaneId = "rail" | "mid" | "right";
