@@ -419,6 +419,8 @@ button.srv-trow:hover { border-color:var(--blue); }
 .srv-trow .n { font-weight:600; flex:1; min-width:0; }
 .srv-trow .m { color:var(--ink2); font-size:12px; flex:none; }
 .srv-sel { flex:none; font-size:12px; font-weight:600; color:var(--blue); }
+.srv-sel-btn { display:inline-flex; align-items:center; height:22px; padding:0 10px; border-radius:999px; border:1px solid var(--line-strong); background:var(--soft2); color:var(--blue); font-size:12px; font-weight:600; cursor:pointer; }
+.srv-sel-btn:hover { border-color:var(--blue); background:var(--bluefill); }
 .srv-trow.sel .srv-sel { color:var(--blueink); }
 .srv-dl { flex:none; display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 10px; border-radius:999px; border:1px solid var(--line-strong); background:var(--soft2); color:var(--blue); font-size:12px; font-weight:600; cursor:pointer; }
 .srv-dl:hover { border-color:var(--blue); background:var(--bluefill); }

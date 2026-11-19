@@ -726,10 +726,9 @@ export default function App() {
                   <div key={s.n} className="mini-item">
                     <button className={"mini-dot" + (isDone ? " done" : isActive ? " on" : "")} title={s.name}
                       onClick={() => { setRailMini(false); setExpanded(i); }}>
-                      {isDone ? <IconCheck size={15} /> : <Icon size={15} />}
+                      {isDone ? <span className="done-tick"><IconCircleCheckFilled size={15} /></span> : <Icon size={15} />}
                       {isActive && <span className="pulse" />}
                     </button>
-                    <span className="mini-label">{s.name}</span>
                   </div>
                 );
               })}

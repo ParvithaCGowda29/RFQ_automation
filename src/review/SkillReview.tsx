@@ -55,6 +55,14 @@ function OutputTitle({ children }: { children: React.ReactNode }) {
   return <div className="srv-title">{children}</div>;
 }
 
+// Dense review-table theme, matching the plain BomGrid look.
+function useSrvTheme(dark: boolean) {
+  return useMemo(() => themeQuartz.withPart(dark ? colorSchemeDark : colorSchemeLight).withParams({
+    fontFamily: "inherit", fontSize: 13, headerFontSize: 12, headerFontWeight: 600,
+    rowVerticalPaddingScale: 1.2, wrapperBorderRadius: 8, cellHorizontalPadding: 6,
+  }), [dark]);
+}
+
 /* ---------- Skill 2: Extracted Data (Editable) ---------- */
 
 interface AttrRow { id: string; assembly: string; attribute: string; value: string; unit: string; source: string; status: string }
@@ -136,9 +144,9 @@ function SupplierData({ dark }: { dark: boolean }) {
       <OutputTitle>Supplier data</OutputTitle>
       <div className="isr-banner info">
         <IconCircleCheckFilled size={15} />
-        <span>5 suppliers selected from the preferred lists and online sources, reliability-scored per part or commodity.</span>
+        <span>5 suppliers selected from the preferred lists and online sources, reliability-scored per part or commodity. Click a cell and type to edit.</span>
       </div>
-      <BomGrid dark={dark} plain widths={[82, 104, 146, 56, 72]}
+      <BomGrid dark={dark} plain editable widths={[82, 104, 146, 56, 72]}
         columns={["Commodity", "Part", "Selected supplier", "Score", "Source"]}
         rows={[
           ["Connectors", "40-pin header", "Mouser", "96/100", "Preferred"],
@@ -162,9 +170,9 @@ function DistributorPricing({ dark }: { dark: boolean }) {
       <OutputTitle>Distributor pricing</OutputTitle>
       <div className="isr-banner info">
         <IconCircleCheckFilled size={15} />
-        <span>3 of 5 suppliers replied - Mouser, Digi-Key and Avnet. The two enclosure vendors are still pending.</span>
+        <span>3 of 5 suppliers replied - Mouser, Digi-Key and Avnet. The two enclosure vendors are still pending. Click a cell and type to edit.</span>
       </div>
-      <BomGrid dark={dark} plain widths={[126, 92, 66, 44, 54, 66]}
+      <BomGrid dark={dark} plain editable widths={[126, 92, 66, 44, 54, 66]}
         columns={["RFQ line", "Supplier", "Price", "MOQ", "Lead", "Status"]}
         rows={[
           ["U4 - MCU STM32F407", "Mouser", "Rs 412", "1", "2 wks", "Replied"],
@@ -182,28 +190,31 @@ function DistributorPricing({ dark }: { dark: boolean }) {
 
 /* ---------- Skill 5: Report (feasibility verdict + risk flags) ---------- */
 
-function FeasibilityReport() {
+function FeasibilityReport({ dark }: { dark: boolean }) {
   const verdict = OUTPUTS["5.4"]?.[0];
   return (
     <>
       <OutputTitle>Report</OutputTitle>
-      <div className="ocard">
-        <h3><span className="oi"><IconCircleCheckFilled size={15} /></span>{verdict?.title ?? "Feasibility verdict"}</h3>
-        {(verdict?.rows ?? []).map((r) => (
-          <div className="kv" key={r.k}><span className="k">{r.k}</span><span className="v" style={r.tone ? { color: `var(--${r.tone})` } : undefined}>{r.v}</span></div>
-        ))}
-        <div className="kv"><span className="k">Min hole size (0.3 mm)</span><span className="v" style={{ color: "var(--blue)" }}>Can build</span></div>
-        <div className="kv"><span className="k">Tightest tolerance (±0.05 mm)</span><span className="v" style={{ color: "var(--blue)" }}>Can build</span></div>
-        <div style={{ marginTop: 8 }}>
-          {(verdict?.risks ?? []).map((r) => <span className="risk" key={r}><IconAlertTriangle size={12} /> {r}</span>)}
-        </div>
+      <div className="isr-banner info">
+        <IconCircleCheckFilled size={15} />
+        <span>Feasibility verdict with per-constraint reasons and risk flags. Click a cell and type to edit.</span>
       </div>
-      <div className="ocard">
-        <h3><span className="oi"><IconAlertTriangle size={15} /></span>Noted for the quote</h3>
-        <div className="kv"><span className="k">EOL parts</span><span className="v">U4, U9</span></div>
-        <div className="kv"><span className="k">Long-lead-time</span><span className="v">J2 (14 weeks)</span></div>
-        <div className="kv"><span className="k">Input gaps from the drawing</span><span className="v">2</span></div>
-      </div>
+      <BomGrid dark={dark} plain editable widths={[190, undefined]}
+        columns={["Feasibility verdict", "Result"]}
+        rows={[
+          ...(verdict?.rows ?? []).map((r) => [r.k, r.v]),
+          ["Min hole size (0.3 mm)", "Can build"],
+          ["Tightest tolerance (±0.05 mm)", "Can build"],
+          ...(verdict?.risks ?? []).map((r) => ["Flagged risk", r]),
+        ]} />
+      <div style={{ height: 12 }} />
+      <BomGrid dark={dark} plain editable widths={[190, undefined]}
+        columns={["Noted for the quote", "Detail"]}
+        rows={[
+          ["EOL parts", "U4, U9"],
+          ["Long-lead-time", "J2 (14 weeks)"],
+          ["Input gaps from the drawing", "2"],
+        ]} />
     </>
   );
 }
@@ -221,17 +232,38 @@ const TEMPLATES: TemplateRow[] = [
   { name: "Logistics and packing template", file: "logistics.xlsx", source: "Sample library" },
 ];
 
-function TemplateSearch() {
+function TemplateSearch({ dark }: { dark: boolean }) {
   const [query, setQuery] = useState("");
+  const [rows, setRows] = useState<TemplateRow[]>(TEMPLATES);
   const [selected, setSelected] = useState<string | null>(null);
   const q = query.trim().toLowerCase();
-  const shown = TEMPLATES.filter((t) => !q || t.name.toLowerCase().includes(q) || t.file.includes(q));
+  const shown = rows.filter((t) => !q || t.name.toLowerCase().includes(q) || t.file.includes(q));
+  const theme = useSrvTheme(dark);
+  const colDefs = useMemo<ColDef<TemplateRow>[]>(() => {
+    const base: Partial<ColDef<TemplateRow>> = { editable: true, sortable: false, suppressHeaderMenuButton: true, suppressMovable: true, cellDataType: false };
+    return [
+      { ...base, field: "name", headerName: "Template", flex: 1, minWidth: 160 },
+      { ...base, field: "file", headerName: "File", width: 150 },
+      { ...base, field: "source", headerName: "Source", width: 110 },
+      {
+        headerName: "", width: 96, editable: false, sortable: false, suppressHeaderMenuButton: true, suppressMovable: true, cellDataType: false,
+        cellRenderer: (p: ICellRendererParams<TemplateRow>) => {
+          const isSel = selected === p.data?.file;
+          return (
+            <button type="button" className="srv-sel-btn" onClick={() => setSelected(isSel ? null : p.data!.file)}>
+              {isSel ? "Selected" : "Select"}
+            </button>
+          );
+        },
+      },
+    ];
+  }, [selected]);
   return (
     <>
       <OutputTitle>Search online for templates</OutputTitle>
       <div className="isr-banner info">
         <IconAlertTriangle size={15} />
-        <span>Demo: this filters a local sample list - no online search is connected.</span>
+        <span>Demo: this filters a local sample list - no online search is connected. Click a cell and type to edit.</span>
       </div>
       <div className="srv-search">
         <IconSearch size={15} />
@@ -242,22 +274,25 @@ function TemplateSearch() {
           aria-label="Search cost templates"
         />
       </div>
-      <div className="srv-list">
-        {shown.length === 0 && <div className="srv-empty">No templates match "{query}".</div>}
-        {shown.map((t) => (
-          <button type="button" key={t.file}
-            className={"srv-trow" + (selected === t.file ? " sel" : "")}
-            onClick={() => setSelected(selected === t.file ? null : t.file)}>
-            <span className="n">{t.name}</span>
-            <span className="m">{t.file} · {t.source}</span>
-            <span className="srv-sel">{selected === t.file ? "Selected" : "Select"}</span>
-          </button>
-        ))}
+      <div className="bom-grid">
+        <AgGridReact<TemplateRow>
+          theme={theme}
+          columnDefs={colDefs}
+          rowData={shown}
+          domLayout="autoHeight"
+          headerHeight={30}
+          rowHeight={30}
+          suppressCellFocus
+          stopEditingWhenCellsLoseFocus
+          animateRows={false}
+          onCellValueChanged={() => setRows((prev) => [...prev])}
+          overlayNoRowsTemplate={`No templates match your search.`}
+        />
       </div>
       {selected && (
         <div className="isr-banner info" style={{ marginTop: 8 }}>
           <IconCircleCheckFilled size={15} />
-          <span>{TEMPLATES.find((t) => t.file === selected)?.name} selected for the cost baseline.</span>
+          <span>{rows.find((t) => t.file === selected)?.name} selected for the cost baseline.</span>
         </div>
       )}
     </>
@@ -272,9 +307,9 @@ function CompareMatrix({ dark }: { dark: boolean }) {
       <OutputTitle>Compare</OutputTitle>
       <div className="isr-banner info">
         <IconCircleCheckFilled size={15} />
-        <span>Validated quotes lined up against the internal baseline; the most cost-effective path is marked per part. Rejected quotes are auto-quarantined.</span>
+        <span>Validated quotes lined up against the internal baseline; the most cost-effective path is marked per part. Rejected quotes are auto-quarantined. Click a cell and type to edit.</span>
       </div>
-      <BomGrid dark={dark} plain widths={[124, 82, 58, 62, 60, 66]}
+      <BomGrid dark={dark} plain editable widths={[124, 82, 58, 62, 60, 66]}
         columns={["Part", "Baseline", "Mouser", "Digi-Key", "Avnet", "Best"]}
         rows={[
           ["U4 - MCU STM32F407", "Rs 405", "Rs 412", "Rs 428", "-", "Baseline"],
@@ -297,9 +332,9 @@ function CostedBomSheet({ dark }: { dark: boolean }) {
       <OutputTitle>Costed BOM sheet</OutputTitle>
       <div className="isr-banner info">
         <IconCircleCheckFilled size={15} />
-        <span>Multi-level costed BOM - material, labor and overhead, 100% auditable price points. Pushed to BullMind.</span>
+        <span>Multi-level costed BOM - material, labor and overhead, 100% auditable price points. Pushed to BullMind. Click a cell and type to edit.</span>
       </div>
-      <BomGrid dark={dark} columns={grid.columns} rows={grid.rows} />
+      <BomGrid dark={dark} editable columns={grid.columns} rows={grid.rows} />
     </>
   );
 }
@@ -350,7 +385,35 @@ function downloadAllReports() {
   writeFile(book, "RFQ-1042_All_16_Reports_DEMO.xlsx");
 }
 
-function ReportsDashboard() {
+interface ReportRow { name: string; meta: string; all?: boolean }
+
+const REPORT_ROWS: ReportRow[] = [
+  { name: "All 16 reports", meta: "One workbook, 16 sheets", all: true },
+  ...REPORTS.map((r) => ({ name: r, meta: "Ready" })),
+];
+
+function ReportsDashboard({ dark }: { dark: boolean }) {
+  const [rows, setRows] = useState<ReportRow[]>(REPORT_ROWS);
+  const theme = useSrvTheme(dark);
+  const colDefs = useMemo<ColDef<ReportRow>[]>(() => {
+    const base: Partial<ColDef<ReportRow>> = { editable: true, sortable: false, suppressHeaderMenuButton: true, suppressMovable: true, cellDataType: false };
+    return [
+      { ...base, field: "name", headerName: "Report", flex: 1, minWidth: 150 },
+      { ...base, field: "meta", headerName: "Status", width: 180 },
+      {
+        headerName: "", width: 118, editable: false, sortable: false, suppressHeaderMenuButton: true, suppressMovable: true, cellDataType: false,
+        cellRenderer: (p: ICellRendererParams<ReportRow>) => {
+          if (!p.data) return null;
+          return (
+            <button type="button" className="srv-dl" onClick={() => (p.data!.all ? downloadAllReports() : downloadReport(p.data!.name))}
+              aria-label={p.data.all ? "Download all 16 reports together" : `Download ${p.data.name}`}>
+              <IconDownload size={14} /> {p.data.all ? "Download all" : "Download"}
+            </button>
+          );
+        },
+      },
+    ];
+  }, []);
   return (
     <>
       <OutputTitle>Superset dashboard (Downloadable 16 reports)</OutputTitle>
@@ -359,23 +422,23 @@ function ReportsDashboard() {
         <div className="srv-tile"><span className="t-n">2</span><span className="t-l">Superset dashboards</span></div>
         <div className="srv-tile"><span className="t-n">Q&amp;A</span><span className="t-l">DBHub answers</span></div>
       </div>
-      <div className="srv-list">
-        <div className="srv-trow srv-all">
-          <span className="n">All 16 reports</span>
-          <span className="m">One workbook, 16 sheets</span>
-          <button type="button" className="srv-dl" onClick={downloadAllReports} aria-label="Download all 16 reports together">
-            <IconDownload size={14} /> Download all
-          </button>
-        </div>
-        {REPORTS.map((r) => (
-          <div className="srv-trow" key={r}>
-            <span className="n">{r}</span>
-            <span className="m">Ready</span>
-            <button type="button" className="srv-dl" onClick={() => downloadReport(r)} aria-label={`Download ${r}`}>
-              <IconDownload size={14} /> Download
-            </button>
-          </div>
-        ))}
+      <div className="isr-banner info">
+        <IconCircleCheckFilled size={15} />
+        <span>Every report is ready to download. Click a cell and type to edit.</span>
+      </div>
+      <div className="bom-grid">
+        <AgGridReact<ReportRow>
+          theme={theme}
+          columnDefs={colDefs}
+          rowData={rows}
+          domLayout="autoHeight"
+          headerHeight={30}
+          rowHeight={30}
+          suppressCellFocus
+          stopEditingWhenCellsLoseFocus
+          animateRows={false}
+          onCellValueChanged={() => setRows((prev) => [...prev])}
+        />
       </div>
     </>
   );
@@ -388,11 +451,11 @@ export function SkillReviewBody({ skillNo, dark }: { skillNo: number; dark: bool
     case 2: return <ExtractedData dark={dark} />;
     case 3: return <SupplierData dark={dark} />;
     case 4: return <DistributorPricing dark={dark} />;
-    case 5: return <FeasibilityReport />;
-    case 6: return <TemplateSearch />;
+    case 5: return <FeasibilityReport dark={dark} />;
+    case 6: return <TemplateSearch dark={dark} />;
     case 7: return <CompareMatrix dark={dark} />;
     case 8: return <CostedBomSheet dark={dark} />;
-    case 9: return <ReportsDashboard />;
+    case 9: return <ReportsDashboard dark={dark} />;
     default: return null;
   }
 }
