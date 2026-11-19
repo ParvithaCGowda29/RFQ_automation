@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   IconAlertTriangle, IconBolt, IconChartBar, IconCheck,
   IconClipboardCheck, IconDatabase, IconFiles, IconFileSpreadsheet, IconFileZip,
@@ -21,14 +22,14 @@ function HumanGateIcon({ size = 14 }: { size?: number }) {
 }
 import { GoalDraft, GOAL_PREFIX } from "./GoalEntry";
 import { LoginPage } from "./LoginPage";
-import camLogoBlack from "./assets/cam-bom-automation-black.png";
-import camLogoWhite from "./assets/cam-bom-automation-white.png";
+import rfqLogoBlack from "./assets/rfq-automation-black.png";
+import rfqLogoWhite from "./assets/rfq-automation-white.png";
 import { useList } from "@refinedev/core";
 import { dictationSupported, startDictation, stopDictation, useDictate } from "./dictation";
 import Uppy from "@uppy/core";
 import { CoverLetterEditor } from "./editor";
 import { BomGrid } from "./bomgrid";
-import { SKILLS, OUTPUTS, HOOK_LINE, REVIEW_LINE, type OutCard, type Skill } from "./data";
+import { SKILLS, OUTPUTS, type OutCard, type Skill } from "./data";
 import { ReviewShell, SkillReviewBody } from "./review/SkillReview";
 import { InputStandardisationReview } from "./review/InputStandardisationReview";
 import { MastersApp } from "./masters/MastersApp";
@@ -38,6 +39,35 @@ import { loadRuns, saveRun, statusLabel, type RunStatus } from "./runs";
    to revert that piece to the approved base look. Review panel switched on
    17 Nov 2026 - she asked for the approval gates to be wired in. */
 const FEAT = { progressBar: false, reviewPanel: true };
+// Sub-skill pace (19 Nov 2026, per user): each sub-skill's outputs appear after roughly
+// 2-3 minutes of work, not instantly. 2.5 minutes sits in the middle of her range.
+const SUB_SKILL_MS = 150_000;
+
+/* ---- Pane swapping helpers (ported from BAM_UI src/lib/paneLayout.ts, 2026-11-19) ---- */
+type PaneId = "rail" | "mid" | "right";
+type PaneOrder = [PaneId, PaneId, PaneId];
+const DEFAULT_PANE_ORDER: PaneOrder = ["rail", "mid", "right"];
+const PANE_ORDER_KEY = "rfq-pane-order-v1";
+const PANE_HINT_KEY = "rfq-pane-hint-v1";
+const asPaneOrder = (v: unknown): PaneOrder =>
+  Array.isArray(v) && v.length === 3 && new Set(v).size === 3 && DEFAULT_PANE_ORDER.every(p => v.includes(p))
+    ? [...v] as PaneOrder : [...DEFAULT_PANE_ORDER];
+const readPaneOrder = (): PaneOrder => {
+  try { return asPaneOrder(JSON.parse(localStorage.getItem(PANE_ORDER_KEY) ?? "null")); } catch { return asPaneOrder(null); }
+};
+const swapPanes = (order: PaneOrder, source: PaneId, target: PaneId): PaneOrder => {
+  const next = [...order] as PaneOrder;
+  const a = next.indexOf(source), b = next.indexOf(target);
+  [next[a], next[b]] = [next[b], next[a]];
+  return next;
+};
+const paneHeaderProps = {
+  tabIndex: 0,
+  title: "Drag this header to swap panes. Or press Alt + Left/Right.",
+  "data-pane-handle": "",
+} as const;
+const canArrange = () => matchMedia("(min-width: 861px)").matches;
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const SwapIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -163,12 +193,6 @@ const ICONS: Record<string, any> = {
 type Phase = "idle" | "running" | "review" | "done";
 interface Msg { who: "ai" | "me"; text: string }
 
-// Chat lines when the Skill 1 review opens (same wording as the approved wireframe).
-const REVIEW1_CHAT: Msg[] = [
-  { who: "ai", text: "All three files are read and the scrub BOM is standardised. The review is open in the Output pane." },
-  { who: "ai", text: "One thing needs you: Inventory Stock is empty on every row. Supply the values, or confirm zero, and that check clears." },
-];
-
 const REVIEW_CHECKS: Record<number, string[]> = {
   5: ["Verdict: can build - 0402 parts, 8 oven zones",
       "Risk flags seen: 2 EOL parts (U4, U9), 1 long-lead-time (J2, 14 weeks)",
@@ -260,7 +284,6 @@ export default function App() {
     const i = map[d] ?? 4;
     setSkillIdx(i); setSubIdx(d === "running" || d === "bom" ? 2 : 3); setExpanded(i);
     setPhase(d === "running" || d === "bom" ? "running" : d === "final" ? "done" : "review");
-    if (d === "review1") setMsgs(REVIEW1_CHAT);
   }, []);
   const [draft, setDraft] = useState("");
   const [uploadNote, setUploadNote] = useState("");
@@ -281,16 +304,153 @@ export default function App() {
   }, [listening]);
   const [railMini, setRailMini] = useState(() => new URLSearchParams(location.search).has("mini"));
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
-  const [paneOrder, setPaneOrder] = useState<string[]>(["rail", "mid", "right"]);
-  const swapPane = (id: string) => setPaneOrder(o => {
-    const i = o.indexOf(id);
-    const next = [...o];
-    if (i === 0) { next.push(next.shift()!); } // leftmost wraps to the far right; the rest shift one left
-    else { [next[i - 1], next[i]] = [next[i], next[i - 1]]; }
-    return next;
-  });
+  /* ---- Pane swapping (2026-11-19, per user request): the exact BAM_UI behaviour - drag a pane by its
+     header (ghost, live reorder, settle animation), click the grip to move one place left (leftmost wraps),
+     Alt+Left/Right on a focused header, order saved in this browser, one-time hint, reduced-motion respected.
+     BAM_UI's width-resize dividers are not ported - she asked for the swapping only. ---- */
+  const [paneOrder, setPaneOrder] = useState<PaneOrder>(readPaneOrder);
+  const orderRef = useRef(paneOrder);
+  orderRef.current = paneOrder;
+  const persistOrder = (next: PaneOrder) => {
+    orderRef.current = next;
+    setPaneOrder(next);
+    try { localStorage.setItem(PANE_ORDER_KEY, JSON.stringify(next)); } catch { /* layout still works with storage blocked */ }
+  };
+  const mainRef = useRef<HTMLDivElement>(null);
+  const gesture = useRef<{
+    source: PaneId; x: number; y: number; lastX: number; lastY: number;
+    moving: boolean; home: PaneOrder; ghost?: HTMLDivElement; homeRect?: DOMRect;
+  } | null>(null);
+  const [drag, setDrag] = useState<PaneId | null>(null);
+  const [hint, setHint] = useState<{ x: number; y: number } | null>(null);
+  const hintDone = () => {
+    try { localStorage.setItem(PANE_HINT_KEY, "done"); } catch { /* storage blocked */ }
+    setHint(null);
+  };
+  const collapsedPane = (p: PaneId) => (p === "rail" && railMini) || (p === "mid" && assistantCollapsed);
   const paneCols = paneOrder.map((id, i) =>
-    (id === "rail" && railMini) || (id === "mid" && assistantCollapsed) ? "56px" : `minmax(0, ${[20, 40, 40][i]}fr)`).join(" ");
+    collapsedPane(id) ? "56px" : `minmax(0, ${[20, 40, 40][i]}fr)`).join(" ");
+
+  /** Neighbours glide aside in real time: FLIP-animate the panes around an order change. */
+  const glide = (mutate: () => void) => {
+    const el = mainRef.current;
+    if (!el || reducedMotion()) { mutate(); return; }
+    const slots = Array.from(el.querySelectorAll<HTMLElement>("[data-layout-pane]"));
+    const before = new Map(slots.map(s => [s, s.getBoundingClientRect()]));
+    flushSync(mutate);
+    for (const s of slots) {
+      const b = before.get(s)!;
+      const a = s.getBoundingClientRect();
+      const dx = b.left - a.left, dy = b.top - a.top;
+      if (dx || dy) s.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.2,.6,.2,1)" });
+    }
+  };
+
+  /** Which visual column a client x lands in, from the committed layout (never the mid-glide positions),
+   *  so a live reorder cannot oscillate while panes are still gliding. */
+  const columnAt = (clientX: number): number => {
+    const el = mainRef.current;
+    if (!el) return 0;
+    const cs = getComputedStyle(el);
+    const gap = parseFloat(cs.columnGap) || 12;
+    const padL = parseFloat(cs.paddingLeft) || 12;
+    const padR = parseFloat(cs.paddingRight) || 12;
+    const cur = orderRef.current;
+    const collapsedPx = cur.reduce((s, q) => s + (collapsedPane(q) ? 56 : 0), 0);
+    const total = el.clientWidth - padL - padR - 2 * gap - collapsedPx;
+    const frTotal = cur.reduce((s, q, j) => s + (collapsedPane(q) ? 0 : [20, 40, 40][j]), 0);
+    let x = el.getBoundingClientRect().left + padL;
+    for (let i = 0; i < cur.length; i++) {
+      const w = collapsedPane(cur[i]) ? 56 : [20, 40, 40][i] / frTotal * total;
+      if (clientX < x + w + gap / 2) return i;
+      x += w + gap;
+    }
+    return cur.length - 1;
+  };
+
+  const startGhost = (g: NonNullable<typeof gesture.current>) => {
+    const slot = mainRef.current?.querySelector<HTMLElement>(`[data-layout-pane="${g.source}"]`);
+    if (!slot) return;
+    const rect = slot.getBoundingClientRect();
+    const ghost = document.createElement("div");
+    ghost.className = "pane-ghost";
+    ghost.setAttribute("aria-hidden", "true");
+    ghost.appendChild(slot.cloneNode(true));
+    Object.assign(ghost.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px` });
+    document.body.appendChild(ghost);
+    slot.dataset.dropSlot = "";
+    g.ghost = ghost;
+    g.homeRect = rect;
+  };
+  const cleanupGhost = (g: NonNullable<typeof gesture.current>) => {
+    g.ghost?.remove();
+    mainRef.current?.querySelector(`[data-layout-pane="${g.source}"]`)?.removeAttribute("data-drop-slot");
+    g.ghost = undefined;
+  };
+  /** Drop, Esc or pointer cancel: the ghost slides into its slot and settles in ~220 ms (ease-out);
+   *  cancelling glides the order back home first. */
+  const settle = (g: NonNullable<typeof gesture.current>, cancel: boolean) => {
+    const ghost = g.ghost;
+    const slot = mainRef.current?.querySelector<HTMLElement>(`[data-layout-pane="${g.source}"]`);
+    if (!ghost) { if (slot) slot.removeAttribute("data-drop-slot"); return; }
+    const changed = orderRef.current.join() !== g.home.join();
+    if (cancel && changed) glide(() => persistOrder(g.home));
+    if (!cancel && changed) hintDone();
+    const rect = slot?.getBoundingClientRect();
+    const home = g.homeRect!;
+    const fromX = g.lastX - g.x, fromY = g.lastY - g.y;
+    const toX = (rect?.left ?? home.left) - home.left, toY = (rect?.top ?? home.top) - home.top;
+    if (reducedMotion()) { cleanupGhost(g); return; }
+    ghost.style.transform = `translate(${fromX}px, ${fromY}px)`;
+    const anim = ghost.animate(
+      [{ transform: `translate(${fromX}px, ${fromY}px)` }, { transform: `translate(${toX}px, ${toY}px)` }],
+      { duration: 220, easing: "cubic-bezier(.2,.6,.2,1)" });
+    anim.finished.then(() => cleanupGhost(g), () => cleanupGhost(g));
+  };
+
+  /* Esc cancels an in-flight drag (window-level: focus is rarely inside the shell mid-drag). */
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const g = gesture.current;
+      if (!g) return;
+      gesture.current = null;
+      setDrag(null);
+      if (g.moving) settle(g, true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* First-use hint: one-time bubble pointing at a grip. It retires forever after "Got it" or the
+     first successful swap; "Show me again later" only closes it for this visit. */
+  useEffect(() => {
+    let shown = false;
+    const attempt = () => {
+      if (shown) return;
+      try { if (localStorage.getItem(PANE_HINT_KEY) === "done") { shown = true; return; } } catch { /* show */ }
+      if (!canArrange()) return;
+      const grip = mainRef.current?.querySelector('[data-layout-pane="mid"] .pane-swap') ?? mainRef.current?.querySelector(".pane-swap");
+      const r = grip?.getBoundingClientRect();
+      if (!r || r.width === 0) return;
+      shown = true;
+      setHint({ x: r.left + r.width / 2, y: r.bottom + 10 });
+    };
+    const t = window.setInterval(attempt, 1200);
+    attempt();
+    return () => window.clearInterval(t);
+  }, []);
+
+  /** One click on the grip button swaps the pane one position left (at the left edge it wraps to the far right). */
+  const swapPane = (id: PaneId) => {
+    const cur = orderRef.current;
+    const i = cur.indexOf(id);
+    if (i < 0) return;
+    const next = i === 0 ? ([...cur.slice(1), id] as PaneOrder) : swapPanes(cur, id, cur[i - 1]);
+    glide(() => persistOrder(next));
+    hintDone();
+  };
   const [afOpen, setAfOpen] = useState(() => new URLSearchParams(location.search).has("af"));
   const [uploadModal, setUploadModal] = useState<null | "folder" | "files" | "zip">(null);
   const [dropOver, setDropOver] = useState(false);
@@ -344,9 +504,8 @@ export default function App() {
         setSubIdx(subIdx + 1);
       } else {
         setPhase("review");
-        setMsgs(m => [...m, ...(skill.n === 1 ? REVIEW1_CHAT : [{ who: "ai" as const, text: REVIEW_LINE[skill.n] ?? `${skill.name} finished - the review is open in the Output pane.` }])]);
       }
-    }, 500);
+    }, SUB_SKILL_MS);
     return () => clearTimeout(t);
   }, [phase, subIdx, skillIdx]);
 
@@ -376,7 +535,6 @@ export default function App() {
     if (!skill || phase !== "review") return;
     if (skillIdx < skills.length - 1) {
       // Skill approved: the hook fires and the run continues with the next skill.
-      setMsgs(m => [...m, { who: "ai", text: HOOK_LINE(skill.name, skills[skillIdx + 1].name) }]);
       setSkillIdx(skillIdx + 1); setSubIdx(0); setExpanded(skillIdx + 1); setPhase("running");
       return;
     }
@@ -387,7 +545,6 @@ export default function App() {
   const stopRun = () => {
     if (phase !== "running") return;
     recordRun("stopped");
-    setMsgs(m => [...m, { who: "ai", text: "Run stopped. Nothing was sent - start it again any time." }]);
     resetRun();
   };
 
@@ -396,10 +553,6 @@ export default function App() {
     const note = (noteOverride ?? rejectNote).trim();
     recordRun("sent-back", note || undefined);
     setRejectOpen(false); setRejectNote("");
-    const rework = skill?.n === 1
-      ? "The package stays with Input Standardization for rework"
-      : "The draft stays with Sales Quote for rework";
-    setMsgs(m => [...m, { who: "ai", text: `Sent back${note ? ` with your note: "${note}"` : ""}. ${rework}; start the run again when ready.` }]);
     resetRun();
   };
 
@@ -415,14 +568,14 @@ export default function App() {
     skillIdx < 0 ? "wait" : j < subIdx ? "done" : j > subIdx ? "wait" : phase === "review" ? "review" : phase === "done" ? "done" : "run";
 
   if (!authenticated) {
-    return <LoginPage theme={theme} onToggleTheme={() => setTheme(theme === "light" ? "dark" : "light")} onSignIn={signInToDemo} />;
+    return <LoginPage theme={theme} onSignIn={signInToDemo} />;
   }
 
   return (
     <div className="app">
       {view === "rfq" && (
       <header className="top">
-        <img className="wm-logo" src={theme === "light" ? camLogoBlack : camLogoWhite} alt="CAM BOM Automation" />
+        <img className="wm-logo" src={theme === "light" ? rfqLogoBlack : rfqLogoWhite} alt="RFQ Automation" />
         <div className="top-right">
           <button className="demo-chip as-btn" onClick={() => { setRunsOpen(true); setOpenRunId(null); }}><IconHistory size={13} /> Runs</button>
           <span className="demo-chip">Demo - mock data, no backend</span>
@@ -453,10 +606,75 @@ export default function App() {
       )}
 
       {view === "masters" ? <MastersApp dark={theme === "dark"} onToggleTheme={() => setTheme(theme === "light" ? "dark" : "light")} onBack={() => setView("rfq")} /> : (
-      <div className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")} style={{ gridTemplateColumns: paneCols }}>
+      <div
+        ref={mainRef}
+        className={"main" + (assistantCollapsed ? " assistant-collapsed" : "")}
+        style={{ gridTemplateColumns: paneCols }}
+        data-pane-drag={drag ?? undefined}
+        onPointerDownCapture={e => {
+          const el = e.target as HTMLElement;
+          if (!canArrange() || e.button !== 0 || el.closest("button, a, input, textarea, select, [contenteditable=\"true\"]") || !el.closest("[data-pane-handle]")) return;
+          const source = el.closest<HTMLElement>("[data-layout-pane]")?.dataset.layoutPane as PaneId | undefined;
+          if (!source) return;
+          gesture.current = { source, x: e.clientX, y: e.clientY, lastX: e.clientX, lastY: e.clientY, moving: false, home: orderRef.current };
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={e => {
+          const g = gesture.current;
+          if (!g) return;
+          if (!g.moving && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 6) return;
+          if (!g.moving) { g.moving = true; startGhost(g); setDrag(g.source); }
+          g.lastX = e.clientX; g.lastY = e.clientY;
+          e.preventDefault();
+          if (g.ghost) g.ghost.style.transform = `translate(${e.clientX - g.x}px, ${e.clientY - g.y}px)`;
+          // Live reorder: the dragged pane takes the column the pointer is in; neighbours glide aside.
+          const cur = orderRef.current;
+          const from = cur.indexOf(g.source);
+          const to = columnAt(e.clientX);
+          if (to !== from) {
+            const next = cur.filter(p => p !== g.source) as PaneId[];
+            next.splice(to, 0, g.source);
+            glide(() => persistOrder(next as PaneOrder));
+          }
+        }}
+        onPointerUp={e => {
+          const g = gesture.current;
+          gesture.current = null;
+          setDrag(null);
+          if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+          if (g?.moving) { g.lastX = e.clientX; g.lastY = e.clientY; settle(g, false); }
+        }}
+        onPointerCancel={() => {
+          const g = gesture.current;
+          gesture.current = null;
+          setDrag(null);
+          if (g?.moving) settle(g, true);
+        }}
+        onLostPointerCapture={() => {
+          const g = gesture.current;
+          gesture.current = null;
+          setDrag(null);
+          if (g?.moving) settle(g, true);
+        }}
+        onKeyDown={e => {
+          if (e.key === "Escape") {
+            const g = gesture.current;
+            gesture.current = null;
+            setDrag(null);
+            if (g?.moving) settle(g, true);
+            return;
+          }
+          if (!canArrange() || !e.altKey || !["ArrowLeft", "ArrowRight"].includes(e.key) || !(e.target as HTMLElement).matches("[data-pane-handle]")) return;
+          const source = (e.target as HTMLElement).closest<HTMLElement>("[data-layout-pane]")?.dataset.layoutPane as PaneId | undefined;
+          if (!source) return;
+          const cur = orderRef.current;
+          const target = cur[cur.indexOf(source) + (e.key === "ArrowLeft" ? -1 : 1)];
+          if (target) { e.preventDefault(); glide(() => persistOrder(swapPanes(cur, source, target))); hintDone(); }
+        }}
+      >
         {/* LEFT RAIL - workflow (BAM_UI look) */}
-        <section className={"pane rail" + (railMini ? " mini" : "")} style={{ order: paneOrder.indexOf("rail") }}>
-          <div className="rail-h">
+        <section className={"pane rail" + (railMini ? " mini" : "")} style={{ order: paneOrder.indexOf("rail") }} data-layout-pane="rail">
+          <div className="rail-h" {...paneHeaderProps}>
             {!railMini && <button className="iconbtn sm pane-swap" onClick={() => swapPane("rail")} aria-label="Swap the workflow pane one place left" title="Swap pane left"><SwapIcon /></button>}
             {!railMini && <h2>Agent - RFQ Automation</h2>}
             <button className="iconbtn sm" onClick={() => setRailMini(!railMini)} aria-expanded={!railMini}
@@ -560,7 +778,7 @@ export default function App() {
         </section>
 
         {/* MIDDLE - assistant chat */}
-        <section className={"pane mid" + (assistantCollapsed ? " collapsed" : "")} style={{ order: paneOrder.indexOf("mid") }}>
+        <section className={"pane mid" + (assistantCollapsed ? " collapsed" : "")} style={{ order: paneOrder.indexOf("mid") }} data-layout-pane="mid">
           {assistantCollapsed ? (
             <div className="assistant-rail-head">
               <button className="assistant-show" onClick={() => setAssistantCollapsed(false)} aria-expanded={false} aria-label="Show assistant">
@@ -569,7 +787,7 @@ export default function App() {
             </div>
           ) : (
           <>
-          <div className="pane-h">
+          <div className="pane-h" {...paneHeaderProps}>
             <button className="iconbtn sm pane-swap" onClick={() => swapPane("mid")} aria-label="Swap the assistant pane one place left" title="Swap pane left"><SwapIcon /></button>
             <div className="assistant-title"><h2 className="assistant-heading">BuLLM assistant</h2></div>
             <button className="iconbtn sm assistant-hide" onClick={() => setAssistantCollapsed(true)} aria-expanded={true} aria-label="Hide assistant" title="Hide assistant">
@@ -633,8 +851,8 @@ export default function App() {
         </section>
 
         {/* RIGHT - steps output */}
-        <section className="pane right" style={{ order: paneOrder.indexOf("right") }}>
-          <div className="pane-h">
+        <section className="pane right" style={{ order: paneOrder.indexOf("right") }} data-layout-pane="right">
+          <div className="pane-h" {...paneHeaderProps}>
             <button className="iconbtn sm pane-swap" onClick={() => swapPane("right")} aria-label="Swap the output pane one place left" title="Swap pane left"><SwapIcon /></button>
             <IconBolt size={16} />
             <div><h2>Output</h2>
@@ -732,7 +950,9 @@ export default function App() {
                       </div>
                     );
                   })}
-                  {(OUTPUTS[sub.id] || []).map((c: OutCard) => (
+                  {/* Outputs land only when the sub-skill finishes (19 Nov 2026, per user): while it
+                      runs, the pane shows its steps with the Running state and no output cards yet. */}
+                  {ss !== "run" && (OUTPUTS[sub.id] || []).map((c: OutCard) => (
                     <div className="ocard" key={c.title}>
                       <h3><span className="oi">{(() => { const I = ICONS[c.icon] || IconFileSpreadsheet; return <I size={15} />; })()}</span>{c.title}</h3>
                       {c.editor && <CoverLetterEditor content={c.editor} />}
@@ -778,6 +998,15 @@ export default function App() {
             </div>
           )}
         </section>
+        {hint && (
+          <div className="pane-hint" style={{ left: hint.x, top: hint.y }} role="dialog" aria-label="Panes can be rearranged">
+            <p>Drag a pane by its header, or click its swap icon, to rearrange your workspace.</p>
+            <div className="pane-hint-actions">
+              <button type="button" className="pane-hint-ok" onClick={hintDone}>Got it</button>
+              <button type="button" className="pane-hint-later" onClick={() => setHint(null)}>Show me again later</button>
+            </div>
+          </div>
+        )}
       </div>
       )}
       {uploadModal && (

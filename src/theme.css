@@ -422,8 +422,31 @@ button.srv-trow:hover { border-color:var(--blue); }
 .srv-trow.sel .srv-sel { color:var(--blueink); }
 .srv-dl { flex:none; display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 10px; border-radius:999px; border:1px solid var(--line-strong); background:var(--soft2); color:var(--blue); font-size:12px; font-weight:600; cursor:pointer; }
 .srv-dl:hover { border-color:var(--blue); background:var(--bluefill); }
+.srv-trow.srv-all { border-color:var(--blue); background:var(--bluefill); margin-bottom:4px; }
+.srv-trow.srv-all .srv-dl { background:var(--blue); color:#fff; border-color:var(--blue); }
+.srv-trow.srv-all .srv-dl:hover { filter:brightness(1.08); }
 .srv-empty { color:var(--ink2); font-size:13px; padding:10px; }
 .srv-tiles { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:10px; }
 .srv-tile { border:1px solid var(--line); border-radius:10px; background:var(--card); padding:10px 12px; display:flex; flex-direction:column; gap:2px; }
 .srv-tile .t-n { font-size:18px; font-weight:700; color:var(--blue); }
 .srv-tile .t-l { font-size:11px; color:var(--ink2); }
+
+/* ---- Pane swapping (ported from BAM_UI v3.css, 2026-11-19, per user) ---- */
+[data-pane-handle] { cursor:grab; touch-action:none; }
+[data-pane-handle]:focus-visible { outline:2px solid var(--blue); outline-offset:-3px; }
+.main[data-pane-drag] { user-select:none; cursor:grabbing; }
+.pane-ghost { position:fixed; z-index:100; margin:0; display:flex; opacity:.9; pointer-events:none; filter:drop-shadow(0 16px 30px rgb(15 23 42 / .35)); }
+.pane-ghost > * { flex:1; min-width:0; }
+/* The landing place is a dashed slot; neighbours glide aside in real time (FLIP in App.tsx). */
+.pane[data-drop-slot] { position:relative; }
+.pane[data-drop-slot] > * { visibility:hidden; }
+.pane[data-drop-slot]::before { content:''; position:absolute; inset:0; border:2px dashed var(--blue); border-radius:12px; background:var(--bluefill); }
+.pane[data-drop-slot]::after { content:'Drop to place here'; position:absolute; inset:0; display:grid; place-items:center; color:var(--blue); font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+/* First visit only: a one-time hint points at a grip; it retires forever after the first successful swap. */
+.pane-hint { position:fixed; z-index:130; transform:translateX(-50%); max-width:300px; padding:12px 14px; border-radius:12px; background:var(--blue); color:#fff; box-shadow:0 12px 30px rgb(15 23 42 / .25); font-size:13px; }
+.pane-hint::before { content:''; position:absolute; top:-5px; left:50%; width:10px; height:10px; margin-left:-5px; transform:rotate(45deg); background:inherit; }
+.pane-hint p { margin:0 0 10px; font-weight:600; line-height:1.35; }
+.pane-hint-actions { display:flex; align-items:center; gap:12px; }
+.pane-hint-ok { padding:5px 14px; border:0; border-radius:99px; background:#fff; color:var(--blue); font-weight:700; font-size:12px; cursor:pointer; }
+.pane-hint-later { padding:5px 0; border:0; background:none; color:rgb(255 255 255 / .85); font-size:12px; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.pane-hint-later:hover { color:#fff; }

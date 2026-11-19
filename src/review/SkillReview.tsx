@@ -315,12 +315,12 @@ const REPORTS = [
 
 // Each report is generated on click from the demo's mock figures. The file itself is
 // marked as demo content - it never relies on the page banner alone.
-function downloadReport(name: string) {
+function buildReportSheet(name: string, generated: string) {
   const aoa: (string | number)[][] = [
     [name],
     ["Demo - mock data, no backend"],
     ["RFQ", "RFQ-1042"],
-    ["Generated", new Date().toLocaleString()],
+    ["Generated", generated],
     [],
     ["Metric", "Value"],
     ["Costed BOM total", "Rs 8,42,300"],
@@ -330,9 +330,24 @@ function downloadReport(name: string) {
   ];
   const sheet = utils.aoa_to_sheet(aoa);
   sheet["!cols"] = [{ wch: 28 }, { wch: 48 }];
+  return sheet;
+}
+
+function downloadReport(name: string) {
   const book = utils.book_new();
-  utils.book_append_sheet(book, sheet, name.slice(0, 31));
+  utils.book_append_sheet(book, buildReportSheet(name, new Date().toLocaleString()), name.slice(0, 31));
   writeFile(book, `${name.replace(/\s+/g, "_")}_DEMO.xlsx`);
+}
+
+// "Download all reports together once" (user request 2026-11-19): one workbook,
+// one sheet per report, same demo-marked content as the individual downloads.
+function downloadAllReports() {
+  const generated = new Date().toLocaleString();
+  const book = utils.book_new();
+  for (const name of REPORTS) {
+    utils.book_append_sheet(book, buildReportSheet(name, generated), name.slice(0, 31));
+  }
+  writeFile(book, "RFQ-1042_All_16_Reports_DEMO.xlsx");
 }
 
 function ReportsDashboard() {
@@ -345,6 +360,13 @@ function ReportsDashboard() {
         <div className="srv-tile"><span className="t-n">Q&amp;A</span><span className="t-l">DBHub answers</span></div>
       </div>
       <div className="srv-list">
+        <div className="srv-trow srv-all">
+          <span className="n">All 16 reports</span>
+          <span className="m">One workbook, 16 sheets</span>
+          <button type="button" className="srv-dl" onClick={downloadAllReports} aria-label="Download all 16 reports together">
+            <IconDownload size={14} /> Download all
+          </button>
+        </div>
         {REPORTS.map((r) => (
           <div className="srv-trow" key={r}>
             <span className="n">{r}</span>

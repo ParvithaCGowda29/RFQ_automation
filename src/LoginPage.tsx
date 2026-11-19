@@ -1,122 +1,209 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { IconArrowRight, IconEye, IconEyeOff, IconMoon, IconSun } from "@tabler/icons-react";
-import centumLogoMobile from "./assets/centum-logo.png";
-import centumLogoShowcase from "./assets/centum-logo-dark.png";
+// /login: replicates the exact BAM_UI login screen (layout, tokens, panel art,
+// form behaviour) per user request 2026-11-19, rebranded RFQ Automation. Showcase
+// quotes/chips are RFQ's own copy (the BAM quotes describe the FDE pipeline).
+// Sign-in stays demo-only: any valid email + password enters the demo.
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { IconAlertTriangle, IconCheck, IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
+import rfqLogoBlack from "./assets/rfq-automation-black.png";
+import rfqLogoWhite from "./assets/rfq-automation-white.png";
+import panel from "./assets/login/bull-panel.png";
 import "./login.css";
 
-type Theme = "light" | "dark";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const SHOWCASE_MESSAGES = [
+const LOGIN_MESSAGES = [
   { headline: "From RFQ package to quote review.", flow: "Upload files > Check the BOM > Review the quote" },
   { headline: "Keep feasibility and parts risks in view.", flow: "Buildability > EOL parts > Lead times" },
   { headline: "Follow the work through to final approval.", flow: "RFQ intake > Costed BOM > Quote approval" },
 ];
 
-function BrandBlock({ mobile = false, theme }: { mobile?: boolean; theme: Theme }) {
-  const logo = mobile && theme === "light" ? centumLogoMobile : centumLogoShowcase;
-  return (
-    <div className={`login-brand-block${mobile ? " login-brand-mobile" : ""}`} aria-label="Centum Automation Modules, CAM 3.4, powered by BuLLM">
-      <img className="login-centum-logo" src={logo} alt="Centum" />
-      <span className="login-brand-name">CENTUM AUTOMATION MODULES</span>
-      <span className="login-brand-version">CAM 3.4</span>
-      <span className="login-brand-powered">POWERED BY <strong><span className="login-bullm-bu">Bu</span><span className="login-bullm-llm">LLM</span></strong></span>
-    </div>
-  );
-}
-
-export function LoginPage({
-  theme,
-  onToggleTheme,
-  onSignIn,
-}: {
-  theme: Theme;
-  onToggleTheme: () => void;
-  onSignIn: () => void;
-}) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [carouselHeld, setCarouselHeld] = useState(false);
-  const [pageHidden, setPageHidden] = useState(() => document.hidden);
-
+export function LoginPage({ theme, onSignIn }: { theme: "light" | "dark"; onSignIn: () => void }) {
   useEffect(() => {
-    const onVisibility = () => setPageHidden(document.hidden);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
+    const t = document.title;
+    document.title = "Sign in · RFQ Automation";
+    return () => { document.title = t; };
   }, []);
-  useEffect(() => {
-    if (carouselHeld || pageHidden || SHOWCASE_MESSAGES.length < 2) return;
-    const timer = window.setInterval(() => setMessageIndex(index => (index + 1) % SHOWCASE_MESSAGES.length), 6000);
-    return () => window.clearInterval(timer);
-  }, [carouselHeld, pageHidden]);
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    await new Promise(resolve => window.setTimeout(resolve, 450));
-    setPassword("");
-    onSignIn();
-  };
 
   return (
     <main className="login-page">
-      <span className="demo-chip login-state">Demo</span>
-      <div className="login-frame">
-        <section className="login-showcase" aria-label="CAM RFQ workspace">
-          <div className="login-showcase-inner">
-            <BrandBlock theme={theme} />
-            <div className="login-story" onMouseEnter={() => setCarouselHeld(true)} onMouseLeave={() => setCarouselHeld(false)}>
-              <div className="login-story-copy" aria-live="polite" key={messageIndex}>
-                <span className="login-story-label">BUILT AROUND YOUR RFQ</span>
-                <h2>{SHOWCASE_MESSAGES[messageIndex].headline}</h2>
-                <p>{SHOWCASE_MESSAGES[messageIndex].flow}</p>
-              </div>
-              <div className="login-story-indicators" aria-hidden="true">
-                {SHOWCASE_MESSAGES.map((message, index) => <span key={message.headline} className={`login-story-dot${index === messageIndex ? " is-active" : ""}`} />)}
-              </div>
-            </div>
-            <div className="login-showcase-foot" aria-label="Workflow areas">
-              <span className="login-foot-chip">RFQ intake</span><span className="login-foot-chip">BOM analysis</span><span className="login-foot-chip">Quote review</span>
-            </div>
+      <div className="login-card">
+        <Showcase />
+        <section className="login-left">
+          <div className="login-brand">
+            <img
+              src={theme === "dark" ? rfqLogoWhite : rfqLogoBlack}
+              alt="RFQ Automation"
+              className="login-lockup"
+            />
           </div>
-        </section>
-
-        <section className="login-form-panel" aria-labelledby="login-title">
-          <button className="login-theme-toggle" type="button" onClick={onToggleTheme}
-            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}>
-            {theme === "light" ? <IconMoon size={17} /> : <IconSun size={17} />}
-          </button>
-          <div className="login-form-content">
-            <BrandBlock mobile theme={theme} />
-            <div className="login-copy">
-              <span className="login-eyebrow">YOUR RFQ WORKSPACE</span>
-              <h2 id="login-title">Welcome back</h2>
-            </div>
-            <form className="login-form" onSubmit={submit}>
-              <label htmlFor="cam-login-email">Work email</label>
-              <input id="cam-login-email" type="email" autoComplete="username" placeholder="you@company.com"
-                value={email} onChange={event => setEmail(event.target.value)} required disabled={busy} />
-              <div className="login-password-label"><label htmlFor="cam-login-password">Password</label></div>
-              <div className="login-password-wrap">
-                <input id="cam-login-password" type={showPassword ? "text" : "password"} autoComplete="current-password"
-                  placeholder="Enter password" value={password} onChange={event => setPassword(event.target.value)} required disabled={busy} />
-                <button type="button" className="login-password-toggle" onClick={() => setShowPassword(value => !value)}
-                  aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} disabled={busy}>
-                  {showPassword ? <IconEyeOff size={19} /> : <IconEye size={19} />}
-                </button>
-              </div>
-              <button className="login-submit" type="submit" disabled={busy}>
-                {busy ? "Opening demo..." : <>Sign in <IconArrowRight size={18} /></>}
-              </button>
-            </form>
-            <p className="login-demo-note">Demo sign-in only. Use any email and password; nothing is sent or saved.</p>
-            <div className="login-secure-note"><span className="login-secure-dot" /> Mock access for this browser session</div>
-          </div>
+          <h1 className="login-title">Welcome back</h1>
+          <p className="login-lede">Sign in to your RFQ Automation workspace.</p>
+          <SignInForm onSignIn={onSignIn} />
+          <p className="login-note">Demo build - sign in with any work email to explore the pipeline. No real account is checked.</p>
         </section>
       </div>
     </main>
+  );
+}
+
+function SignInForm({ onSignIn }: { onSignIn: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
+  const [keep, setKeep] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [status, setStatus] = useState<"idle" | "busy" | "ok">("idle");
+  const [caps, setCaps] = useState(false);
+  const [forgot, setForgot] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const pwRef = useRef<HTMLInputElement>(null);
+  const busy = status !== "idle";
+
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => setCaps(e.getModifierState("CapsLock"));
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    const next = {
+      email: EMAIL_RE.test(email.trim()) ? undefined : "Enter a valid work email",
+      password: password ? undefined : "Enter your password",
+    };
+    setErrors(next);
+    if (next.email) return emailRef.current?.focus();
+    if (next.password) return pwRef.current?.focus();
+    setStatus("busy");
+    // Demo sign-in: brief pause, then straight into the demo workspace.
+    await new Promise(resolve => window.setTimeout(resolve, 600));
+    setStatus("ok");
+    window.setTimeout(onSignIn, 600);
+  }
+
+  return (
+    <form className="login-form" noValidate onSubmit={submit}>
+      <div className="login-field">
+        <label htmlFor="login-email">Work email</label>
+        <input
+          id="login-email" ref={emailRef} type="email" autoComplete="username"
+          placeholder="you@centumelectronics.com" autoFocus
+          value={email} onChange={e => setEmail(e.target.value)} disabled={busy}
+          aria-invalid={!!errors.email} aria-describedby={errors.email ? "login-email-err" : undefined}
+        />
+        {errors.email && <p id="login-email-err" className="login-err"><IconAlertTriangle size={13} aria-hidden />{errors.email}</p>}
+      </div>
+
+      <div className="login-field">
+        <label htmlFor="login-password">Password</label>
+        <div className="login-pw">
+          <input
+            id="login-password" ref={pwRef} type={show ? "text" : "password"} autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password} onChange={e => setPassword(e.target.value)}
+            onKeyDown={onKey} onKeyUp={onKey} onBlur={() => setCaps(false)} disabled={busy}
+            aria-invalid={!!errors.password}
+            aria-describedby={[errors.password && "login-pw-err", caps && "login-caps"].filter(Boolean).join(" ") || undefined}
+          />
+          <button
+            type="button" className="login-eye" onClick={() => setShow(s => !s)} aria-pressed={show}
+            aria-label={show ? "Hide password" : "Show password"} disabled={busy}
+          >
+            {show ? <IconEyeOff size={20} aria-hidden /> : <IconEye size={20} aria-hidden />}
+          </button>
+        </div>
+        {errors.password && <p id="login-pw-err" className="login-err"><IconAlertTriangle size={13} aria-hidden />{errors.password}</p>}
+        {caps && <p id="login-caps" className="login-hint">Caps Lock is on.</p>}
+      </div>
+
+      <div className="login-row">
+        <label className="login-check">
+          <input type="checkbox" checked={keep} onChange={e => setKeep(e.target.checked)} disabled={busy} />
+          Keep me signed in
+        </label>
+        <button type="button" className="login-link" onClick={() => setForgot(true)} aria-expanded={forgot} aria-controls="login-forgot">
+          Forgot password?
+        </button>
+      </div>
+      <p id="login-forgot" className="login-hint" role="status">{forgot ? "Password reset runs through IT - mail it@centumelectronics.com from your work email." : ""}</p>
+
+      <button type="submit" className={`login-submit ${status}`} aria-disabled={busy}>
+        {status === "busy"
+          ? <><IconLoader2 size={18} className="spin" aria-hidden />Signing in</>
+          : status === "ok"
+            ? <><IconCheck size={18} aria-hidden />Signed in</>
+            : "Sign in"}
+      </button>
+    </form>
+  );
+}
+
+const ROTATE_MS = 6000;
+
+function Showcase() {
+  const n = LOGIN_MESSAGES.length;
+  const [i, setI] = useState(0);
+  const [prev, setPrev] = useState<number | null>(null);
+  const [manual, setManual] = useState(false);
+  const [held, setHeld] = useState(false);
+  const [hidden, setHidden] = useState(() => document.hidden);
+  const [restart, setRestart] = useState(0);
+  const cur = useRef(0);
+
+  const show = (to: number, byUser: boolean) => {
+    const next = ((to % n) + n) % n;
+    if (next === cur.current) return;
+    setPrev(cur.current);
+    cur.current = next;
+    setI(next);
+    setManual(byUser);
+    if (byUser) setRestart(r => r + 1);
+  };
+
+  useEffect(() => {
+    const f = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", f);
+    return () => document.removeEventListener("visibilitychange", f);
+  }, []);
+  useEffect(() => {
+    if (held || hidden || n < 2) return;
+    const t = setInterval(() => show(cur.current + 1, false), ROTATE_MS);
+    return () => clearInterval(t);
+  }, [held, hidden, n, restart]);
+
+  const m = LOGIN_MESSAGES[i];
+  const old = prev !== null ? LOGIN_MESSAGES[prev] : null;
+  return (
+    <aside className="login-panel" aria-label="RFQ Automation highlights">
+      <img src={panel} alt="" className="login-panel-art" width={580} height={440} />
+      <div className="login-panel-body">
+        <ul className="login-chips" aria-label="Product areas">
+          <li>10 skills</li><li>Human gates</li><li>16 reports</li>
+        </ul>
+        <div
+          className="login-rotator" onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)}
+          onFocus={() => setHeld(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHeld(false); }}
+        >
+          <div className="login-quote" aria-live={manual ? "polite" : "off"}>
+            {old && (
+              <div key={`o${prev}`} className="login-quote-text out" aria-hidden onAnimationEnd={() => setPrev(null)}>
+                <p className="login-quote-head">{old.headline}</p><p className="login-quote-flow">{old.flow}</p>
+              </div>
+            )}
+            <div key={i} className="login-quote-text in">
+              <p className="login-quote-head">{m.headline}</p><p className="login-quote-flow">{m.flow}</p>
+            </div>
+          </div>
+          <div className="login-controls">
+            <div className="login-dots">
+              {LOGIN_MESSAGES.map((_, k) => (
+                <button
+                  key={k} type="button" className="login-dot" aria-label={`Show message ${k + 1} of ${n}`}
+                  aria-current={k === i ? "true" : undefined}
+                  onClick={() => show(k, true)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }
