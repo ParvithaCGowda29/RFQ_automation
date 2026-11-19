@@ -339,102 +339,174 @@ function CostedBomSheet({ dark }: { dark: boolean }) {
   );
 }
 
-/* ---------- Skill 9: Superset dashboard (Downloadable 16 reports) ---------- */
+/* ---------- Skill 9: Superset dashboard - one Excel workbook ----------
+   Output is ONE single .xlsx containing every sheet (her reference workbook,
+   19 sheets), downloaded with a single action. The grid below previews the
+   workbook's sheets; demo content, marked in the file name and intro sheet. */
 
-const REPORTS = [
-  "RFQ summary", "Cost breakdown", "Supplier comparison", "Feasibility summary",
-  "Risk register", "Lead-time analysis", "EOL parts list", "Price variance",
-  "Quote validation", "Costed BOM", "Margin analysis", "Payment terms",
-  "Delivery schedule", "Compliance checklist", "Management dashboard data", "Sales quote summary",
+interface SheetRow { sheet: string; contents: string }
+
+const WORKBOOK_SHEETS: SheetRow[] = [
+  { sheet: "Introduction", contents: "CAM overview with tab links to every sheet" },
+  { sheet: "BOM MATRIX", contents: "Part numbers x volumes with description, commodity, MFG, unit price" },
+  { sheet: "Part Num Vs Mfg Num", contents: "Internal part number to manufacturer part number mapping" },
+  { sheet: "PCB NRE & FAI Charge", contents: "PCB non-recurring engineering and FAI charges" },
+  { sheet: "Mech & EM NRE", contents: "Mechanical and electromechanical NRE charges" },
+  { sheet: "Missing Notes", contents: "Uncosted parts with quoted MFR/MPN and remarks" },
+  { sheet: "Lead Time (FG Wise)", contents: "Lead time in weeks per finished good, with part counts" },
+  { sheet: "Lead Time Consolidated", contents: "Lead time in weeks consolidated with percentages" },
+  { sheet: "Sum & Count", contents: "Per-assembly scrub BOM vs volume sum and count checks" },
+  { sheet: "Sum & Count Detailed", contents: "Per-CPN scrub BOM vs volume sum and count checks" },
+  { sheet: "Revision History", contents: "Old vs new system quantities across revisions and volumes" },
+  { sheet: "A CLASS PARTS", contents: "A-class parts with extended volume cost splits and suppliers" },
+  { sheet: "Price Control", contents: "Price-control sums per manufacturer with percentages" },
+  { sheet: "Summary", contents: "CBOM summary - cost per assembly and volume" },
+  { sheet: "Batchwise Cashflow", contents: "Payment terms and buy values per batch" },
+  { sheet: "7.0 CBOM VL-1", contents: "Awards costed BOM, volume 1 (template, project, currency)" },
+  { sheet: "7.0 CBOM VL-2", contents: "Awards costed BOM, volume 2 (template, project, currency)" },
+  { sheet: "Ex Inv VL-1", contents: "Excess inventory cost after first batch, volume 1" },
+  { sheet: "Ex Inv VL-2", contents: "Excess inventory cost after first batch, volume 2" },
 ];
 
-// Each report is generated on click from the demo's mock figures. The file itself is
-// marked as demo content - it never relies on the page banner alone.
-function buildReportSheet(name: string, generated: string) {
-  const aoa: (string | number)[][] = [
-    [name],
-    ["Demo - mock data, no backend"],
+// One workbook, 19 sheets, matching her reference file's sheet names and headers.
+// Demo content: the file name is suffixed DEMO and the Introduction sheet says so.
+function downloadWorkbook() {
+  const generated = new Date().toLocaleString();
+  const book = utils.book_new();
+  const add = (name: string, aoa: (string | number)[][]) => {
+    const sheet = utils.aoa_to_sheet(aoa);
+    sheet["!cols"] = aoa[0] ? aoa[0].map(() => ({ wch: 22 })) : [];
+    utils.book_append_sheet(book, sheet, name.slice(0, 31));
+  };
+  add("Introduction", [
+    ["CAM - Centum Automation Manager", "Demo - mock data, no backend"],
     ["RFQ", "RFQ-1042"],
     ["Generated", generated],
     [],
-    ["Metric", "Value"],
-    ["Costed BOM total", "Rs 8,42,300"],
-    ["Suppliers evaluated", "5"],
-    ["Quotes replied", "3 of 5"],
-    ["Feasibility verdict", "Can build (2 EOL parts, 1 long-lead-time flagged)"],
-  ];
-  const sheet = utils.aoa_to_sheet(aoa);
-  sheet["!cols"] = [{ wch: 28 }, { wch: 48 }];
-  return sheet;
-}
-
-function downloadReport(name: string) {
-  const book = utils.book_new();
-  utils.book_append_sheet(book, buildReportSheet(name, new Date().toLocaleString()), name.slice(0, 31));
-  writeFile(book, `${name.replace(/\s+/g, "_")}_DEMO.xlsx`);
-}
-
-// "Download all reports together once" (user request 2026-11-19): one workbook,
-// one sheet per report, same demo-marked content as the individual downloads.
-function downloadAllReports() {
-  const generated = new Date().toLocaleString();
-  const book = utils.book_new();
-  for (const name of REPORTS) {
-    utils.book_append_sheet(book, buildReportSheet(name, generated), name.slice(0, 31));
+    ["Tab Name", "Tab Link"],
+    ...WORKBOOK_SHEETS.slice(1).map((s) => [s.sheet, "<click here>"]),
+  ]);
+  add("BOM MATRIX", [
+    ["Part Number", "HCV_BMS_MB", "HCV_BMS_SB", "Grand Total", "EAU VL-1", "EAU VL-2", "Description", "Commodity", "Mfg Name", "Mfg Part Number", "Unit Price"],
+    ["HCV_BMS_MB", 1, 1, 2, 1, 1, "Main board", "PCBA", "Centum", "HCV_BMS_MB", "Rs 4,120"],
+    ["CB_PCBA", 1, 0, 1, 1, 0, "Control board PCBA", "PCBA", "Centum", "CB_PCBA", "Rs 2,860"],
+  ]);
+  add("Part Num Vs Mfg Num", [
+    ["Part Number", "MPN", "In Scrub BOM"],
+    ["HCV_BMS_MB", "", "true"],
+    ["HCV_BMS_MB-ESD Cover", "", "true"],
+  ]);
+  add("PCB NRE & FAI Charge", [
+    ["Part Number", "Description", "Commodity", "Mfg Name", "Mfg Part Number", "NRE Charge (Conv.)"],
+    ["HCV_BMS_MB", "4-layer ENIG PCB", "PCB", "PCB vendor", "HCV_BMS_MB", "$ 0.00"],
+    ["", "", "", "", "Total FAI Charge", "$ 0.00"],
+  ]);
+  add("Mech & EM NRE", [
+    ["Part Number", "Description", "Commodity", "Mfg Name", "Mfg Part Number", "NRE Charge (Conv.)"],
+    ["HCV_BMS_MB-ESD Cover", "ESD cover", "Enclosure", "Enclosure vendor A", "ESD-CVR-01", "$ 0.00"],
+  ]);
+  add("Missing Notes", [
+    ["1. Uncosted Parts"],
+    ["Sl.no", "Part Number", "Description", "Commodity", "Mfg Name", "Mfg Part Number", "x", "Quoted MFR", "Quoted MPN", "Remarks"],
+    [1, "X1270WVS-2x05A-6TV01", "Connector_X1270WVS-2x05A-6TV", "ELECTROMECHANICAL", "China Xingkun", "X1270WVS-2x05A-6TV01", "", "", "", ""],
+  ]);
+  add("Lead Time (FG Wise)", [
+    ["LT in weeks - HCV_BMS_MB", "Count of Part Number", "LT in weeks - HCV_BMS_SB", "Count of Part Number"],
+    [12, 6, 10, 1],
+    [14, 2, 12, 3],
+  ]);
+  add("Lead Time Consolidated", [
+    ["LT in weeks", "Count of Part Number", "In %"],
+    [10, 1, "0.5%"],
+    [12, 6, "3.0%"],
+    [14, 2, "1.0%"],
+  ]);
+  add("Sum & Count", [
+    ["Assembly", "Scrub Bom Sum", "Scrub Bom Count", "VL-1 Sum", "VL-1 Count", "VL-2 Sum", "VL-2 Count", "Is Sum Same", "Is Count Same"],
+    ["HCV_BMS_MB", 17, 9, 17, 9, 17, 9, "yes", "yes"],
+    ["CB_PCBA", 1020, 144, 1020, 144, 1020, 144, "yes", "yes"],
+  ]);
+  add("Sum & Count Detailed", [
+    ["Assembly", "CPN", "Scrub Bom Sum", "Scrub Bom Count", "VL-1 Sum", "VL-1 Count", "VL-2 Sum", "VL-2 Count", "Is Sum Same", "Is Count Same"],
+    ["HCV_BMS_MB", "HCV_BMS_MB", 1, 1, 1, 1, 1, 1, "yes", "yes"],
+    ["HCV_BMS_MB", "HCV_BMS_MB-ESD Cover", 1, 1, 1, 1, 1, 1, "yes", "yes"],
+  ]);
+  add("Revision History", [
+    ["Volume Quantity", "", "", "", "", "", "Cost per Product"],
+    ["S. No", "Revision", "Assembly", "CPN", "Description", "Commodity", "Manufacturer", "MPN", "V1 OLD System QTY", "V1 New System QTY", "V1 EAU", "V2 OLD System QTY"],
+    [1, "Rev-0", "HCV_BMS_MB", "HCV_BMS_MB", "Main board", "PCBA", "Centum", "HCV_BMS_MB", "-", 0, 0, "-"],
+  ]);
+  add("A CLASS PARTS", [
+    ["Part Number", "Description", "Commodity", "Mfg Name", "Mfg Part Number", "Part Qty", "Ext Vol (Splits) #1", "Cost #1", "Ext Price (Splits) #1 (Conv.)", "X", "Ext Vol Cost (Splits) #1", "Supp Name"],
+    ["U4 - MCU STM32F407", "MCU", "Semiconductor", "ST", "STM32F407", 1, 1, "Rs 405", "Rs 405", "", "Rs 405", "Mouser"],
+  ]);
+  add("Price Control", [
+    ["Price Control", "Sum of Ext Price (Splits) #1", "Sum of Ext Vol Cost (Splits)", "In %"],
+    ["Centum", "71.08", "44,373.60", "48.1%"],
+    ["CNP", 0, 0, "0%"],
+  ]);
+  add("Summary", [
+    ["CBOM Summary"],
+    ["0123, Rev-0, 22-Jan-2026"],
+    ["Assembly", "Volume-1", "CBOM Cost VL-1", "Volume-2", "CBOM Cost VL-2"],
+    ["HCV_BMS_MB", 1, "Rs 8,42,300", 1, "Rs 8,42,300"],
+  ]);
+  add("Batchwise Cashflow", [
+    ["Payment term details for VL-1"],
+    ["Supplier Type", "Sum of Buy value after -B1", "Sum of Final buy value", "Average payment terms for B1", "Average payment terms for Final"],
+    ["90 Days", 0, 0, 0, 0],
+  ]);
+  for (const vol of ["VL-1", "VL-2"]) {
+    add(`7.0 CBOM ${vol}`, [
+      ["Awards Costed BOM", "Currency", "Value"],
+      ["Template:", "Centum Costed BOM_Internal", "EUR", 0.93],
+      ["Project:", `5570 - VOL - ${vol === "VL-1" ? 1 : 2}`, "INR", 83.5],
+    ]);
   }
-  writeFile(book, "RFQ-1042_All_16_Reports_DEMO.xlsx");
+  for (const vol of ["VL-1", "VL-2"]) {
+    add(`Ex Inv ${vol}`, [
+      ["Excess Cost #1", 1, vol === "VL-1" ? 20 : 26],
+      [vol === "VL-1" ? "3.425" : "0"],
+      ["Excess After 1st batch"],
+    ]);
+  }
+  writeFile(book, "RFQ-1042_Output_Workbook_DEMO.xlsx");
 }
-
-interface ReportRow { name: string; meta: string; all?: boolean }
-
-const REPORT_ROWS: ReportRow[] = [
-  { name: "All 16 reports", meta: "One workbook, 16 sheets", all: true },
-  ...REPORTS.map((r) => ({ name: r, meta: "Ready" })),
-];
 
 function ReportsDashboard({ dark }: { dark: boolean }) {
-  const [rows, setRows] = useState<ReportRow[]>(REPORT_ROWS);
+  const [rows, setRows] = useState<SheetRow[]>(WORKBOOK_SHEETS);
   const theme = useSrvTheme(dark);
-  const colDefs = useMemo<ColDef<ReportRow>[]>(() => {
-    const base: Partial<ColDef<ReportRow>> = { editable: true, sortable: false, suppressHeaderMenuButton: true, suppressMovable: true, cellDataType: false };
+  const colDefs = useMemo<ColDef<SheetRow>[]>(() => {
+    const base: Partial<ColDef<SheetRow>> = { editable: true, sortable: false, suppressHeaderMenuButton: true, suppressMovable: true, cellDataType: false };
     return [
-      { ...base, field: "name", headerName: "Report", flex: 1, minWidth: 150 },
-      { ...base, field: "meta", headerName: "Status", width: 180 },
-      {
-        headerName: "", width: 118, editable: false, sortable: false, suppressHeaderMenuButton: true, suppressMovable: true, cellDataType: false,
-        cellRenderer: (p: ICellRendererParams<ReportRow>) => {
-          if (!p.data) return null;
-          return (
-            <button type="button" className="srv-dl" onClick={() => (p.data!.all ? downloadAllReports() : downloadReport(p.data!.name))}
-              aria-label={p.data.all ? "Download all 16 reports together" : `Download ${p.data.name}`}>
-              <IconDownload size={14} /> {p.data.all ? "Download all" : "Download"}
-            </button>
-          );
-        },
-      },
+      { ...base, field: "sheet", headerName: "Sheet", width: 190 },
+      { ...base, field: "contents", headerName: "What it holds", flex: 1, minWidth: 220 },
     ];
   }, []);
   return (
     <>
-      <OutputTitle>Superset dashboard (Downloadable 16 reports)</OutputTitle>
+      <OutputTitle>Superset dashboard - one Excel workbook</OutputTitle>
       <div className="srv-tiles">
-        <div className="srv-tile"><span className="t-n">16</span><span className="t-l">Excel reports</span></div>
-        <div className="srv-tile"><span className="t-n">2</span><span className="t-l">Superset dashboards</span></div>
+        <div className="srv-tile"><span className="t-n">19</span><span className="t-l">Sheets</span></div>
+        <div className="srv-tile"><span className="t-n">1</span><span className="t-l">Excel workbook</span></div>
         <div className="srv-tile"><span className="t-n">Q&amp;A</span><span className="t-l">DBHub answers</span></div>
       </div>
       <div className="isr-banner info">
         <IconCircleCheckFilled size={15} />
-        <span>Every report is ready to download. Click a cell and type to edit.</span>
+        <span>All sheets are generated into one single Excel file. Click a cell and type to edit.</span>
+        <button type="button" className="srv-dl" style={{ marginLeft: "auto" }} onClick={downloadWorkbook}
+          aria-label="Download the single Excel workbook with all 19 sheets">
+          <IconDownload size={14} /> Download workbook
+        </button>
       </div>
       <div className="bom-grid">
-        <AgGridReact<ReportRow>
+        <AgGridReact<SheetRow>
           theme={theme}
           columnDefs={colDefs}
           rowData={rows}
           domLayout="autoHeight"
           headerHeight={30}
-          rowHeight={30}
-          suppressCellFocus
+          rowHeight={26}
           stopEditingWhenCellsLoseFocus
           animateRows={false}
           onCellValueChanged={() => setRows((prev) => [...prev])}
